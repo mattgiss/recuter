@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>recuter — apply at the speed of the bots</title>
+  <meta name="description" content="An AI agent that applies to perfect-fit jobs the moment they post. Built for the candidates who keep getting cut off at '150 applicants.'" />
+  <meta property="og:title" content="recuter" />
+  <meta property="og:description" content="Apply at the speed of the bots. Coming soon." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0b0d10" />
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --bg-2: #11141a;
+      --fg: #e8ecf1;
+      --muted: #8a93a0;
+      --accent: #5cf2a3;
+      --accent-dim: #2a8a5b;
+      --border: #1f242c;
+      --error: #ff7a7a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(92, 242, 163, 0.07), transparent 60%),
+        radial-gradient(900px 500px at 110% 110%, rgba(92, 242, 163, 0.05), transparent 60%),
+        var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    main { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+    header, footer { padding: 1.5rem 2rem; }
+    header { display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 1.15rem; }
+    .brand .dot { color: var(--accent); }
+    .status {
+      font-size: 0.78rem; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.7rem; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--bg-2);
+    }
+    .status::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(92, 242, 163, 0.7);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(92, 242, 163, 0.6); }
+      70%  { box-shadow: 0 0 0 10px rgba(92, 242, 163, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(92, 242, 163, 0); }
+    }
+    section.hero {
+      max-width: 880px; margin: 0 auto; padding: 4rem 2rem;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.25rem); line-height: 1.04;
+      letter-spacing: -0.035em; margin: 0 0 1.25rem; font-weight: 800;
+    }
+    h1 .accent { color: var(--accent); }
+    p.lede {
+      font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.55;
+      color: var(--muted); max-width: 60ch; margin: 0 0 2.25rem;
+    }
+
+    form.signup {
+      display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: stretch;
+      max-width: 520px;
+    }
+    form.signup input[type="email"] {
+      flex: 1 1 260px; min-width: 0;
+      padding: 0.85rem 1rem;
+      background: var(--bg-2); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    form.signup input[type="email"]:focus {
+      outline: none; border-color: var(--accent-dim);
+      box-shadow: 0 0 0 3px rgba(92, 242, 163, 0.15);
+    }
+    form.signup button {
+      padding: 0.85rem 1.25rem;
+      background: var(--accent); color: #06140c;
+      border: none; border-radius: 8px;
+      font-weight: 600; font-size: 1rem; cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+      box-shadow: 0 8px 24px -10px rgba(92, 242, 163, 0.5);
+    }
+    form.signup button:hover { transform: translateY(-1px); }
+    form.signup button:disabled { opacity: 0.6; cursor: progress; transform: none; }
+
+    .msg { margin-top: 0.85rem; font-size: 0.9rem; min-height: 1.2em; }
+    .msg.ok { color: var(--accent); }
+    .msg.err { color: var(--error); }
+
+    .pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2.5rem; }
+    .pill {
+      font-size: 0.8rem; color: var(--muted);
+      padding: 0.35rem 0.7rem; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--bg-2);
+    }
+
+    footer {
+      color: var(--muted); font-size: 0.85rem;
+      display: flex; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--fg); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand">recuter<span class="dot">.</span></div>
+      <span class="status">building</span>
+    </header>
+
+    <section class="hero">
+      <h1>Apply at the speed of the <span class="accent">bots</span>.</h1>
+      <p class="lede">
+        Your dream job opens at 9:02. By 9:14, the listing is capped at 150 applicants and closed.
+        recuter watches your job alerts, scores every posting against your profile, tailors your
+        materials, and submits — before the window slams shut.
+      </p>
+
+      <form class="signup" id="signup" novalidate>
+        <input
+          type="email"
+          name="email"
+          id="email"
+          placeholder="you@domain.com"
+          autocomplete="email"
+          required
+          aria-label="Email address"
+        />
+        <button type="submit" id="submit">Get early access</button>
+      </form>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+      <div class="pills" aria-label="focus areas">
+        <span class="pill">GIS-first</span>
+        <span class="pill">Tailored applications</span>
+        <span class="pill">First-in-line submission</span>
+        <span class="pill">Human-in-the-loop</span>
+      </div>
+    </section>
+
+    <footer>
+      <span>&copy; <span id="y"></span> recuter</span>
+      <span>Coming soon.</span>
+    </footer>
+  </main>
+
+  <script src="./config.js"></script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const cfg = window.RECUTER_CONFIG || {};
+    const supabase = (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY)
+      ? createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
+      : null;
+
+    const form = document.getElementById("signup");
+    const input = document.getElementById("email");
+    const btn = document.getElementById("submit");
+    const msg = document.getElementById("msg");
+    document.getElementById("y").textContent = new Date().getFullYear();
+
+    function show(text, kind) {
+      msg.textContent = text;
+      msg.className = "msg " + (kind || "");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = input.value.trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        show("That email doesn't look right.", "err");
+        return;
+      }
+      if (!supabase) {
+        show("Signups aren't wired up yet — try again soon.", "err");
+        return;
+      }
+      btn.disabled = true;
+      show("Adding you to the list…", "");
+      const { error } = await supabase
+        .from("waitlist")
+        .insert({ email, source: "landing", user_agent: navigator.userAgent });
+      btn.disabled = false;
+      if (error) {
+        if (error.code === "23505") {
+          show("You're already on the list. We'll be in touch.", "ok");
+        } else {
+          console.error(error);
+          show("Something went wrong. Try again in a sec.", "err");
+        }
+        return;
+      }
+      form.reset();
+      show("You're in. We'll be in touch the moment we launch.", "ok");
+    });
+  </script>
+</body>
+</html>

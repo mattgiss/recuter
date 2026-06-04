@@ -1,0 +1,102 @@
+name: Discord Notifications
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, closed]
+  issues:
+    types: [opened, closed]
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on push
+        if: github.event_name == 'push'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          REF_NAME: ${{ github.ref_name }}
+          COMPARE_URL: ${{ github.event.compare }}
+          REPO: ${{ github.repository }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg title "[$REPO] Push to $REF_NAME" \
+            --arg desc "**$ACTOR** · $COMMIT_MSG" \
+            --arg url "$COMPARE_URL" \
+            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:3066993}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+
+      - name: Notify on pull request
+        if: github.event_name == 'pull_request'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ACTOR: ${{ github.actor }}
+          ACTION: ${{ github.event.action }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
+            LABEL="PR merged"
+            COLOR=7419530
+          elif [ "$ACTION" = "closed" ]; then
+            LABEL="PR closed"
+            COLOR=9807270
+          else
+            LABEL="PR opened"
+            COLOR=3447003
+          fi
+          PAYLOAD=$(jq -n \
+            --arg title "[$REPO] $LABEL" \
+            --arg desc "**$PR_TITLE** · by $ACTOR" \
+            --arg url "$PR_URL" \
+            --argjson color "$COLOR" \
+            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:$color}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+
+      - name: Notify on issue
+        if: github.event_name == 'issues'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ACTOR: ${{ github.actor }}
+          ACTION: ${{ github.event.action }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$ACTION" = "opened" ]; then
+            LABEL="Issue opened"
+            COLOR=15158332
+          else
+            LABEL="Issue closed"
+            COLOR=3066993
+          fi
+          PAYLOAD=$(jq -n \
+            --arg title "[$REPO] $LABEL" \
+            --arg desc "**$ISSUE_TITLE** · by $ACTOR" \
+            --arg url "$ISSUE_URL" \
+            --argjson color "$COLOR" \
+            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:$color}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+
+      - name: Notify on release
+        if: github.event_name == 'release'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg title "[$REPO] New release: $RELEASE_NAME" \
+            --arg desc "Published by **$ACTOR**" \
+            --arg url "$RELEASE_URL" \
+            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:16766720}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"

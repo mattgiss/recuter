@@ -100,9 +100,9 @@ create table if not exists cover_letters (
 
 -- Back-link FKs on applications now that resume/cover_letter tables exist
 alter table applications
-  add constraint if not exists applications_resume_fk
+  add constraint applications_resume_fk
     foreign key (resume_id) references resumes(id) on delete set null,
-  add constraint if not exists applications_cover_letter_fk
+  add constraint applications_cover_letter_fk
     foreign key (cover_letter_id) references cover_letters(id) on delete set null;
 
 -- ── Contacts (people at employers) ──────────────────────────

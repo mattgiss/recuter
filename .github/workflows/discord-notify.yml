@@ -25,11 +25,10 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           PAYLOAD=$(jq -n \
-            --arg title "[$REPO] Push to $REF_NAME" \
-            --arg desc "**$ACTOR** · $COMMIT_MSG" \
-            --arg url "$COMPARE_URL" \
-            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:3066993}]}')
-          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+            --arg thread_name "[$REPO] Push to $REF_NAME" \
+            --arg desc "**$ACTOR** pushed to \`$REF_NAME\`\n$COMMIT_MSG\n\n$COMPARE_URL" \
+            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:3066993}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Notify on pull request
         if: github.event_name == 'pull_request'
@@ -53,12 +52,11 @@ jobs:
             COLOR=3447003
           fi
           PAYLOAD=$(jq -n \
-            --arg title "[$REPO] $LABEL" \
-            --arg desc "**$PR_TITLE** · by $ACTOR" \
-            --arg url "$PR_URL" \
+            --arg thread_name "[$REPO] $LABEL: $PR_TITLE" \
+            --arg desc "by **$ACTOR**\n\n$PR_URL" \
             --argjson color "$COLOR" \
-            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:$color}]}')
-          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Notify on issue
         if: github.event_name == 'issues'
@@ -78,12 +76,11 @@ jobs:
             COLOR=3066993
           fi
           PAYLOAD=$(jq -n \
-            --arg title "[$REPO] $LABEL" \
-            --arg desc "**$ISSUE_TITLE** · by $ACTOR" \
-            --arg url "$ISSUE_URL" \
+            --arg thread_name "[$REPO] $LABEL: $ISSUE_TITLE" \
+            --arg desc "by **$ACTOR**\n\n$ISSUE_URL" \
             --argjson color "$COLOR" \
-            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:$color}]}')
-          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Notify on release
         if: github.event_name == 'release'
@@ -95,8 +92,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           PAYLOAD=$(jq -n \
-            --arg title "[$REPO] New release: $RELEASE_NAME" \
-            --arg desc "Published by **$ACTOR**" \
-            --arg url "$RELEASE_URL" \
-            '{username:"GitHub",embeds:[{title:$title,description:$desc,url:$url,color:16766720}]}')
-          curl -sf -X POST "$DISCORD_WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"
+            --arg thread_name "[$REPO] New release: $RELEASE_NAME" \
+            --arg desc "Published by **$ACTOR**\n\n$RELEASE_URL" \
+            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:16766720}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"

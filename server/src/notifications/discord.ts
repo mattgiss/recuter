@@ -124,6 +124,30 @@ export async function notifyReadyToApply(
   await postThread('ready for your ok', [{ text: lead }, { text: list }])
 }
 
+/** A recruiter replied — share what it is and the draft, in Recuter's voice. */
+export async function notifyDraftReply(item: {
+  company: string
+  jobTitle?: string | null
+  type: string
+  summary: string
+  draft: string
+}): Promise<void> {
+  if (!WEBHOOK) return
+
+  const who = item.company || 'someone'
+  const about = item.jobTitle ? ` about ${item.jobTitle}` : ''
+  const kind = item.type.replace(/_/g, ' ')
+
+  await postThread(`reply from ${who}`, [
+    {
+      text: `heads up — ${who} got back to you${about}. looks like a ${kind}.`,
+      color: item.type === 'rejection' ? 0xed4245 : MAGENTA,
+    },
+    ...(item.summary ? [{ text: `quick read: ${item.summary}` }] : []),
+    { text: `here's a reply in your voice — tweak and send:\n\n${item.draft.slice(0, 3500)}` },
+  ])
+}
+
 export interface DBRStats {
   date: string
   jobsFoundToday: number

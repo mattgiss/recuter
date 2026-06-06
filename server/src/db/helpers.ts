@@ -321,3 +321,131 @@ export async function markApplicationPrepared(applicationId: string, jobId: stri
     .eq('id', applicationId)
   await db.from('jobs').update({ status: 'applying' }).eq('id', jobId)
 }
+
+// ── Inbox (recruiter replies → drafted responses) ─────────────────────────────
+
+export interface InboundThread {
+  threadId: string
+  subject: string
+  fromEmail: string
+  body: string
+}
+
+/** Threads that came in via email and still need a drafted reply. */
+export async function getThreadsNeedingReply(): Promise<InboundThread[]> {
+  const { data: threads, error } = await db
+    .from('email_threads')
+    .select('id, subject')
+    .eq('status', 'needs_reply')
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error(`getThreadsNeedingReply failed: ${error.message}`)
+
+  const out: InboundThread[] = []
+  for (const t of threads ?? []) {
+    const { data: msg } = await db
+      .from('email_messages')
+      .select('from_email, body, subject')
+      .eq('thread_id', t.id)
+      .eq('direction', 'inbound')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!msg) continue
+    out.push({
+      threadId: t.id as string,
+      subject: (t.subject as string) ?? (msg.subject as string) ?? '',
+      fromEmail: (msg.from_email as string) ?? '',
+      body: (msg.body as string) ?? '',
+    })
+  }
+  return out
+}
+
+/** Find an employer whose name loosely matches; returns id + latest application. */
+export async function matchEmployerApplication(
+  company: string
+): Promise<{ employerId: string; applicationId: string | null; jobTitle: string | null } | null> {
+  if (!company.trim()) return null
+
+  const { data: emp } = await db
+    .from('employers')
+    .select('id')
+    .ilike('name', `%${company.trim()}%`)
+    .limit(1)
+    .maybeSingle()
+  if (!emp) return null
+
+  const { data: app } = await db
+    .from('applications')
+    .select('id, job_id')
+    .eq('employer_id', emp.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let jobTitle: string | null = null
+  if (app?.job_id) {
+    const { data: job } = await db.from('jobs').select('title').eq('id', app.job_id).maybeSingle()
+    jobTitle = (job?.title as string) ?? null
+  }
+
+  return {
+    employerId: emp.id as string,
+    applicationId: (app?.id as string) ?? null,
+    jobTitle,
+  }
+}
+
+/** Create a contact for the person who emailed, if we don't have them. */
+export async function upsertContact(input: {
+  employerId?: string | null
+  applicationId?: string | null
+  name?: string | null
+  email: string
+}): Promise<string | null> {
+  if (!input.email) return null
+  const { data: existing } = await db
+    .from('contacts')
+    .select('id')
+    .eq('email', input.email)
+    .maybeSingle()
+  if (existing) return existing.id
+
+  const { data, error } = await db
+    .from('contacts')
+    .insert({
+      employer_id: input.employerId ?? null,
+      application_id: input.applicationId ?? null,
+      name: input.name ?? null,
+      email: input.email,
+    })
+    .select('id')
+    .single()
+  if (error) return null
+  return data.id
+}
+
+/** Save the drafted reply and mark the thread handled (awaiting your send). */
+export async function saveDraftReply(input: {
+  threadId: string
+  subject: string
+  body: string
+  toEmail: string
+  applicationId?: string | null
+  contactId?: string | null
+}): Promise<void> {
+  await db.from('email_messages').insert({
+    thread_id: input.threadId,
+    subject: input.subject,
+    body: input.body,
+    to_email: input.toEmail,
+    direction: 'outbound',
+    is_draft: true,
+  })
+
+  const threadUpdate: Record<string, unknown> = { status: 'active' }
+  if (input.applicationId) threadUpdate.application_id = input.applicationId
+  if (input.contactId) threadUpdate.contact_id = input.contactId
+  await db.from('email_threads').update(threadUpdate).eq('id', input.threadId)
+}

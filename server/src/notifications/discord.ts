@@ -2,11 +2,37 @@ import axios from 'axios'
 
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL
 
-function scoreColor(score: number): number {
-  if (score >= 9) return 0x57f287   // green
-  if (score >= 7) return 0xfee75c   // yellow
-  if (score >= 5) return 0xeb459e   // pink
-  return 0xed4245                   // red
+// Recuter's identity on every message — a friendly companion, not a build log.
+const AVATAR_URL =
+  process.env.RECUTER_AVATAR_URL ??
+  'https://raw.githubusercontent.com/mattgiss/recuter/main/assets/recuter-avatar.png'
+const IDENTITY = { username: 'Recuter', avatar_url: AVATAR_URL }
+
+// Recuter's signature palette (cyberpunk cyan → magenta)
+const CYAN = 0x3fe9ff
+const VIOLET = 0x7a3bff
+const MAGENTA = 0xff3bd4
+const SUNRISE = 0xffb454
+
+/** Translate an internal 1–10 score into warm, human language. No numbers leak out. */
+function matchFeel(score: number): { label: string; color: number; opener: string } {
+  if (score >= 9)
+    return {
+      label: '💫 Perfect fit',
+      color: MAGENTA,
+      opener: "Okay, I had to stop and tell you about this one — it's *you* on paper.",
+    }
+  if (score >= 8)
+    return {
+      label: '✨ Excellent fit',
+      color: VIOLET,
+      opener: "I found something I think you're going to really like.",
+    }
+  return {
+    label: '⭐ Strong fit',
+    color: CYAN,
+    opener: "Spotted a role worth a look — it lines up nicely with your strengths.",
+  }
 }
 
 export interface JobNotification {
@@ -23,34 +49,45 @@ export interface JobNotification {
   source: string
 }
 
-/** Post a new high-scoring job match as a Discord forum thread. */
+/** Tell Matt — like a friend would — about a role I found and prepped for him. */
 export async function notifyNewJob(job: JobNotification): Promise<void> {
   if (!WEBHOOK) return
 
-  const salary = job.salaryRaw
-    ?? (job.salaryMin
+  const feel = matchFeel(job.score)
+
+  const pay =
+    job.salaryRaw ??
+    (job.salaryMin
       ? `$${job.salaryMin.toLocaleString()}${job.salaryMax ? `–$${job.salaryMax.toLocaleString()}` : '+'}`
-      : 'Not listed')
+      : 'Not posted (I can ask)')
 
-  const scoreBar = '█'.repeat(job.score) + '░'.repeat(10 - job.score)
-
-  await axios.post(`${WEBHOOK}?wait=true`, {
-    thread_name: `🎯 ${job.score}/10 — ${job.title} @ ${job.company}`,
-    embeds: [{
-      title: `${job.title}`,
-      url: job.url,
-      color: scoreColor(job.score),
-      description: `**${job.company}** · ${job.location ?? 'Location not listed'}`,
-      fields: [
-        { name: 'Fit Score', value: `\`${scoreBar}\` **${job.score}/10**`, inline: false },
-        { name: 'Salary', value: salary, inline: true },
-        { name: 'Source', value: job.source.toUpperCase(), inline: true },
-        { name: 'Why this fits', value: job.reasoning.slice(0, 1000), inline: false },
+  await axios.post(
+    `${WEBHOOK}?wait=true`,
+    {
+      ...IDENTITY,
+      thread_name: `${feel.label} — ${job.title} at ${job.company}`,
+      embeds: [
+        {
+          author: { name: 'Recuter', icon_url: AVATAR_URL },
+          title: `${job.title} · ${job.company}`,
+          url: job.url,
+          color: feel.color,
+          description:
+            `${feel.opener}\n\n` +
+            `**${job.company}** is hiring a **${job.title}**${job.location ? ` in ${job.location}` : ''}, ` +
+            `and I've already drafted a tailored résumé and cover letter for you.`,
+          fields: [
+            { name: '💰 Pay', value: pay, inline: true },
+            { name: '📍 Where', value: job.location ?? 'Flexible / Remote', inline: true },
+            { name: '💭 Why I picked this for you', value: job.reasoning.slice(0, 1000), inline: false },
+          ],
+          footer: { text: "Your résumé & cover letter are ready — just say the word and I'll apply." },
+          timestamp: new Date().toISOString(),
+        },
       ],
-      footer: { text: 'recuter auto-discovery • resume + cover letter generated' },
-      timestamp: new Date().toISOString(),
-    }],
-  }, { headers: { 'Content-Type': 'application/json' } })
+    },
+    { headers: { 'Content-Type': 'application/json' } }
+  )
 }
 
 export interface DBRStats {
@@ -68,58 +105,72 @@ export interface DBRStats {
   scraperErrors: string[]
 }
 
-/** Post the daily business review as a Discord forum thread. */
+/** A warm morning check-in from Recuter — the day's job search, in plain language. */
 export async function postDailyBusinessReview(stats: DBRStats): Promise<void> {
   if (!WEBHOOK) {
-    console.error('[discord] DISCORD_WEBHOOK_URL not set — cannot post DBR')
+    console.error('[discord] DISCORD_WEBHOOK_URL not set — cannot post the morning note')
     return
   }
 
-  const statusIcon = (s: string) => s === 'completed' ? '✅' : s === 'running' ? '🔄' : '❌'
+  // Lead line adapts to how the search is going — never robotic.
+  let lead: string
+  if (stats.highScoringToday >= 3) {
+    lead = `Good morning ☀️ It was a strong night — I found **${stats.highScoringToday} roles** I think you'll genuinely like.`
+  } else if (stats.highScoringToday >= 1) {
+    lead = `Good morning ☀️ I found **${stats.highScoringToday}** role${stats.highScoringToday > 1 ? 's' : ''} worth your time while you slept.`
+  } else if (stats.jobsFoundToday > 0) {
+    lead = `Good morning ☀️ I went through **${stats.jobsFoundToday}** new openings overnight. Nothing was a strong-enough fit to bother you with yet — I'm holding out for the right ones.`
+  } else {
+    lead = `Good morning ☀️ Quiet night on the boards — no new openings came through. I'll keep watching today.`
+  }
+
+  // Friendly summary sentence about what's in flight.
+  const pipelineBits: string[] = []
+  if (stats.applicationsApplied > 0) pipelineBits.push(`**${stats.applicationsApplied}** application${stats.applicationsApplied > 1 ? 's' : ''} out the door`)
+  if (stats.applicationsQueued > 0) pipelineBits.push(`**${stats.applicationsQueued}** ready for your go-ahead`)
+  const pipelineLine = pipelineBits.length
+    ? `Where things stand: ${pipelineBits.join(' · ')}.`
+    : `Nothing in flight yet — once you give me the nod, I'll start sending applications.`
+
   const topJobsText = stats.topJobs.length
-    ? stats.topJobs.map((j, i) => `${i + 1}. **[${j.title} @ ${j.company}](${j.url})** — ${j.score}/10 · ${j.location ?? 'Remote/TBD'}`).join('\n')
-    : '_No high-scoring jobs found yet_'
+    ? stats.topJobs
+        .map(j => `• **[${j.title} at ${j.company}](${j.url})**${j.location ? ` — ${j.location}` : ''}`)
+        .join('\n')
+    : "_Nothing to highlight today — I only surface roles I'd actually stake my reputation on._"
 
-  const scrapeTime = stats.lastScrapeTime
-    ? new Date(stats.lastScrapeTime).toLocaleTimeString('en-US', { timeZone: 'America/Denver', hour: '2-digit', minute: '2-digit' })
-    : 'Never'
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    { name: '📋 Your search, right now', value: pipelineLine, inline: false },
+    { name: '🌟 Worth a look', value: topJobsText, inline: false },
+  ]
 
-  const color = stats.highScoringToday >= 3 ? 0x57f287 : stats.highScoringToday >= 1 ? 0xfee75c : 0x5865f2
+  // If a board was unreachable, mention it gently — no stack traces, no jargon.
+  if (stats.scraperErrors.length) {
+    fields.push({
+      name: '🔧 Heads up',
+      value: "I had trouble reaching one of the job boards overnight. No worries — I'll automatically try again. Nothing for you to do.",
+      inline: false,
+    })
+  }
 
-  await axios.post(`${WEBHOOK}?wait=true`, {
-    thread_name: `📊 Daily Review — ${stats.date} — ${stats.highScoringToday} high-scoring jobs`,
-    embeds: [{
-      title: `📊 Daily Business Review — ${stats.date}`,
-      color,
-      fields: [
+  const color = stats.highScoringToday >= 1 ? SUNRISE : CYAN
+
+  await axios.post(
+    `${WEBHOOK}?wait=true`,
+    {
+      ...IDENTITY,
+      thread_name: `☀️ Your morning briefing — ${stats.date}`,
+      embeds: [
         {
-          name: '📡 Pipeline Status',
-          value: `${statusIcon(stats.lastScrapeStatus)} Last scrape: **${scrapeTime} MDT** · ${stats.lastScrapeJobsFound} listings found`,
-          inline: false,
+          author: { name: 'Recuter', icon_url: AVATAR_URL },
+          title: `Your morning briefing · ${stats.date}`,
+          color,
+          description: `${lead}`,
+          fields,
+          footer: { text: "I'm on it around the clock. Talk soon — Recuter" },
+          timestamp: new Date().toISOString(),
         },
-        {
-          name: '🔍 Discovery (last 24h)',
-          value: `Found: **${stats.jobsFoundToday}** · Scored: **${stats.jobsScoredToday}** · High match (7+): **${stats.highScoringToday}**`,
-          inline: false,
-        },
-        {
-          name: '📋 Application Pipeline',
-          value: `Queued: **${stats.applicationsQueued}** · Applied: **${stats.applicationsApplied}** · Total: **${stats.applicationsTotal}**`,
-          inline: false,
-        },
-        {
-          name: '🏆 Top Matches',
-          value: topJobsText,
-          inline: false,
-        },
-        ...(stats.scraperErrors.length ? [{
-          name: '⚠️ Errors',
-          value: stats.scraperErrors.join('\n').slice(0, 1000),
-          inline: false,
-        }] : []),
       ],
-      footer: { text: 'recuter • automated job search & application system' },
-      timestamp: new Date().toISOString(),
-    }],
-  }, { headers: { 'Content-Type': 'application/json' } })
+    },
+    { headers: { 'Content-Type': 'application/json' } }
+  )
 }

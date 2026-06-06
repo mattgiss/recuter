@@ -3,6 +3,7 @@ import { AUTO_APPLY_SCORE_THRESHOLD } from '../config'
 import { scoreJob } from './scorer'
 import { generateResume } from './resume-generator'
 import { generateCoverLetter } from './cover-letter'
+import { notifyNewJob } from '../notifications/discord'
 import {
   getUnscoredJobs,
   updateJobScore,
@@ -69,7 +70,21 @@ async function runScoring() {
       console.log(`${result.score}/10`)
       scored++
 
-      if (result.score < AUTO_APPLY_SCORE_THRESHOLD) {
+      if (result.score >= AUTO_APPLY_SCORE_THRESHOLD) {
+        notifyNewJob({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          score: result.score,
+          reasoning: result.reasoning,
+          url: job.url,
+          salaryRaw: job.salary_raw,
+          salaryMin: job.salary_min,
+          salaryMax: job.salary_max,
+          source: job.source,
+        }).catch(e => console.warn(`  [discord] ${e.message}`))
+      } else {
         await updateJobStatus(job.id, 'skipped')
         skipped++
       }

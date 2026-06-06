@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matt G — GIS Portfolio</title>
+  <meta name="description" content="GIS professional specializing in spatial analysis, geospatial data engineering, and web mapping. Based in Denver, CO." />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --card: #21253a;
+      --border: #2d3250;
+      --accent: #4f8ef7;
+      --accent2: #7c6af7;
+      --green: #43d9ad;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,17,23,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+    }
+    .nav-brand { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
+    .nav-brand span { color: var(--accent); }
+    .nav-links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+    .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 900px;
+      margin: 4rem auto 3rem;
+      padding: 0 2rem;
+    }
+    .hero-eyebrow {
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 .highlight { color: var(--accent); }
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
+    .chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .chip.active { border-color: var(--accent); color: var(--accent); }
+    .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+    /* ── MAP ── */
+    .map-section { margin: 0 0 3rem; }
+    #map { height: 260px; width: 100%; filter: saturate(0.5) brightness(0.8); }
+
+    /* ── SECTIONS ── */
+    section {
+      max-width: 900px;
+      margin: 0 auto 4rem;
+      padding: 0 2rem;
+    }
+    .section-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    /* ── SKILLS ── */
+    .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .skill-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .skill-card h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    .skill-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .skill-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ── PROJECTS ── */
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+    .project-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .project-card:hover { border-color: var(--accent); }
+    .project-thumb {
+      height: 140px;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--border) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+    .project-body { padding: 1.25rem; }
+    .project-body h3 { font-size: 1rem; margin-bottom: 0.4rem; }
+    .project-body p { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .project-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .project-tag {
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ── EXPERIENCE ── */
+    .timeline { position: relative; padding-left: 1.5rem; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.5rem;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-item { position: relative; margin-bottom: 2rem; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.6rem;
+      top: 0.4rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .timeline-item h3 { font-size: 1rem; font-weight: 700; }
+    .timeline-item .company { color: var(--accent); font-size: 0.9rem; margin-bottom: 0.15rem; }
+    .timeline-item .period { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .timeline-item ul { padding-left: 1.2rem; color: var(--muted); font-size: 0.875rem; }
+    .timeline-item li { margin-bottom: 0.3rem; }
+
+    /* ── CONTACT ── */
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .contact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .contact-card:hover { border-color: var(--accent); text-decoration: none; }
+    .contact-card .icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .contact-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .contact-card .value { font-size: 0.9rem; margin-top: 0.25rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 640px) {
+      nav { padding: 0.75rem 1rem; }
+      .hero, section { padding: 0 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">matt<span>.</span>gis</div>
+  <div class="nav-links">
+    <a href="#skills">Skills</a>
+    <a href="#projects">Projects</a>
+    <a href="#experience">Experience</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <p class="hero-eyebrow">📍 Denver, CO · Open to Remote</p>
+  <h1>GIS Engineer &<br /><span class="highlight">Spatial Data</span> Specialist</h1>
+  <p class="hero-sub">
+    I build geospatial systems that turn complex spatial data into decisions.
+    Deep ESRI stack + open-source GIS, Python automation, and web mapping.
+  </p>
+  <div class="hero-chips">
+    <span class="chip active">ArcGIS Pro</span>
+    <span class="chip active">Python / arcpy</span>
+    <span class="chip active">PostGIS</span>
+    <span class="chip">QGIS</span>
+    <span class="chip">Remote Sensing</span>
+    <span class="chip">Web GIS</span>
+    <span class="chip">Spatial ETL</span>
+    <span class="chip">Cartography</span>
+  </div>
+  <div class="hero-cta">
+    <a href="mailto:matt@gissentanna.com" class="btn btn-primary">📧 Get in Touch</a>
+    <a href="https://github.com/mattgiss" target="_blank" rel="noopener" class="btn btn-ghost">⌥ GitHub</a>
+  </div>
+</div>
+
+<!-- MAP -->
+<div class="map-section">
+  <div id="map"></div>
+</div>
+
+<!-- SKILLS -->
+<section id="skills">
+  <p class="section-label">Technical Skills</p>
+  <div class="skills-grid">
+
+    <div class="skill-card">
+      <h3>ESRI Ecosystem</h3>
+      <div class="skill-list">
+        <span class="skill-tag">ArcGIS Pro</span>
+        <span class="skill-tag">ArcGIS Online</span>
+        <span class="skill-tag">ArcGIS Enterprise</span>
+        <span class="skill-tag">ArcGIS Dashboards</span>
+        <span class="skill-tag">StoryMaps</span>
+        <span class="skill-tag">Experience Builder</span>
+        <span class="skill-tag">ModelBuilder</span>
+      </div>
+    </div>
+
+    <div class="skill-card">
+      <h3>Open Source GIS</h3>
+      <div class="skill-list">
+        <span class="skill-tag">QGIS</span>
+        <span class="skill-tag">PostGIS</span>
+        <span class="skill-tag">GDAL / OGR</span>
+        <span class="skill-tag">Leaflet</span>
+        <span class="skill-tag">MapboxGL JS</span>
+        <span class="skill-tag">OpenLayers</span>
+      </div>
+    </div>
+
+    <div class="skill-card">
+      <h3>Programming</h3>
+      <div class="skill-list">
+        <span class="skill-tag">Python</span>
+        <span class="skill-tag">arcpy</span>
+        <span class="skill-tag">geopandas</span>
+        <span class="skill-tag">shapely</span>
+        <span class="skill-tag">SQL / Spatial SQL</span>
+        <span class="skill-tag">JavaScript / TS</span>
+        <span class="skill-tag">Jupyter</span>
+      </div>
+    </div>
+
+    <div class="skill-card">
+      <h3>Data & Databases</h3>
+      <div class="skill-list">
+        <span class="skill-tag">PostgreSQL + PostGIS</span>
+        <span class="skill-tag">File Geodatabase</span>
+        <span class="skill-tag">Enterprise GDB</span>
+        <span class="skill-tag">ETL Pipelines</span>
+        <span class="skill-tag">FME</span>
+        <span class="skill-tag">Versioning</span>
+      </div>
+    </div>
+
+    <div class="skill-card">
+      <h3>Analysis Domains</h3>
+      <div class="skill-list">
+        <span class="skill-tag">Spatial Analysis</span>
+        <span class="skill-tag">Remote Sensing</span>
+        <span class="skill-tag">Cartography</span>
+        <span class="skill-tag">Urban Planning</span>
+        <span class="skill-tag">Environmental</span>
+        <span class="skill-tag">Transportation</span>
+        <span class="skill-tag">Utilities</span>
+      </div>
+    </div>
+
+    <div class="skill-card">
+      <h3>Web GIS & APIs</h3>
+      <div class="skill-list">
+        <span class="skill-tag">ArcGIS JS API</span>
+        <span class="skill-tag">Feature Services</span>
+        <span class="skill-tag">REST APIs</span>
+        <span class="skill-tag">WMS / WFS</span>
+        <span class="skill-tag">Git</span>
+        <span class="skill-tag">Docker</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <p class="section-label">Projects</p>
+  <div class="projects-grid">
+
+    <div class="project-card">
+      <div class="project-thumb">🗺️</div>
+      <div class="project-body">
+        <h3>Spatial Analysis Dashboard</h3>
+        <p>Interactive ArcGIS Dashboard for real-time monitoring of [domain] data with automated alerting and stakeholder reporting.</p>
+        <div class="project-tags">
+          <span class="project-tag">ArcGIS Online</span>
+          <span class="project-tag">Dashboards</span>
+          <span class="project-tag">Python</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="project-card">
+      <div class="project-thumb">🐍</div>
+      <div class="project-body">
+        <h3>Python GIS Automation</h3>
+        <p>arcpy automation pipeline that processes and validates incoming spatial datasets, reducing manual QA time by ~60%.</p>
+        <div class="project-tags">
+          <span class="project-tag">arcpy</span>
+          <span class="project-tag">Python</span>
+          <span class="project-tag">ModelBuilder</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="project-card">
+      <div class="project-thumb">🌐</div>
+      <div class="project-body">
+        <h3>Web Mapping App</h3>
+        <p>Custom web map built with ArcGIS JavaScript API and hosted on ArcGIS Online for public-facing spatial data access.</p>
+        <div class="project-tags">
+          <span class="project-tag">ArcGIS JS API</span>
+          <span class="project-tag">JavaScript</span>
+          <span class="project-tag">Feature Services</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD YOUR REAL PROJECTS ABOVE THIS COMMENT -->
+
+  </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <p class="section-label">Experience</p>
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <h3>GIS Analyst</h3>
+      <div class="company">[Current Employer] — Denver, CO</div>
+      <div class="period">20XX – Present</div>
+      <ul>
+        <li>Designed and maintained spatial databases supporting enterprise GIS operations</li>
+        <li>Built Python/arcpy automation workflows cutting manual processing time by ~40%</li>
+        <li>Produced ArcGIS Dashboards and Story Maps for executive and public audiences</li>
+        <li>Integrated third-party data feeds (census, satellite, sensor) into enterprise GIS</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h3>GIS Technician</h3>
+      <div class="company">[Previous Employer] — Denver, CO</div>
+      <div class="period">20XX – 20XX</div>
+      <ul>
+        <li>Performed spatial analysis and produced maps for planning and environmental projects</li>
+        <li>Collected and processed field data with GPS devices and mobile data collection tools</li>
+        <li>Maintained File and Enterprise geodatabases with regular QA/QC cycles</li>
+      </ul>
+    </div>
+
+    <!-- EDIT WITH YOUR REAL EXPERIENCE -->
+
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <p class="section-label">Get in Touch</p>
+  <div class="contact-grid">
+    <a class="contact-card" href="mailto:matt@gissentanna.com">
+      <div class="icon">📧</div>
+      <div class="label">Email</div>
+      <div class="value">matt@gissentanna.com</div>
+    </a>
+    <a class="contact-card" href="https://github.com/mattgiss" target="_blank" rel="noopener">
+      <div class="icon">⌥</div>
+      <div class="label">GitHub</div>
+      <div class="value">mattgiss</div>
+    </a>
+    <a class="contact-card" href="https://www.linkedin.com/in/" target="_blank" rel="noopener">
+      <div class="icon">💼</div>
+      <div class="label">LinkedIn</div>
+      <div class="value">Add your URL →</div>
+    </a>
+    <div class="contact-card">
+      <div class="icon">📍</div>
+      <div class="label">Location</div>
+      <div class="value">Denver, CO</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Matt G · GIS Portfolio · Denver, CO · Open to GIS/Geospatial roles $110k+</p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Dark-themed map centered on Denver
+  const map = L.map('map', {
+    center: [39.7392, -104.9903],
+    zoom: 9,
+    zoomControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Denver marker
+  const icon = L.divIcon({
+    html: '<div style="width:12px;height:12px;background:#4f8ef7;border-radius:50%;border:2px solid #fff;box-shadow:0 0 12px rgba(79,142,247,0.8)"></div>',
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+    className: '',
+  });
+
+  L.marker([39.7392, -104.9903], { icon })
+    .addTo(map)
+    .bindPopup('<b>Denver, CO</b><br>GIS Professional · Open to Remote')
+    .openPopup();
+
+  // Add project location markers here — replace with real project spots
+  const projectMarkers = [
+    // { lat: 39.55, lng: -105.0, name: 'Project Name', desc: 'What you did here' },
+  ];
+
+  const projectIcon = L.divIcon({
+    html: '<div style="width:8px;height:8px;background:#43d9ad;border-radius:50%;border:2px solid #fff"></div>',
+    iconSize: [8, 8],
+    iconAnchor: [4, 4],
+    className: '',
+  });
+
+  projectMarkers.forEach(p => {
+    L.marker([p.lat, p.lng], { icon: projectIcon })
+      .addTo(map)
+      .bindPopup(`<b>${p.name}</b><br>${p.desc}`);
+  });
+</script>
+
+</body>
+</html>

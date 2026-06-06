@@ -17,6 +17,8 @@ export async function generateCoverLetter(job: JobForDocs, resumeContent?: strin
     ? `${profile.experience[0].title} at ${profile.experience[0].company}`
     : 'GIS analyst roles'
 
+  const portfolioUrl = process.env.PORTFOLIO_URL ?? 'https://mattgiss.github.io/recuter/portfolio/'
+
   const prompt = `Write a cover letter for this job application.
 
 ## TARGET JOB
@@ -36,14 +38,18 @@ Core GIS skills: ${profile.skills.esri.slice(0, 4).join(', ')}, Python, PostGIS
 Career summary: ${profile.summary}
 ${resumeContent ? `\nResume highlights:\n${resumeContent.slice(0, 800)}` : ''}
 
+## CANDIDATE PORTFOLIO
+${portfolioUrl}
+
 ## INSTRUCTIONS
 1. Open with a specific, compelling hook — reference something real about the company or the role.
 2. Connect 2-3 concrete experiences from the candidate's background to explicit needs in the JD.
 3. Show genuine interest in the company's work — not just "any GIS job".
-4. Close confidently: express interest in next steps without begging.
-5. Tone: professional but warm. First-person. Active voice. No fluff.
-6. Length: 3-4 short paragraphs. No headers. Plain text, not markdown.
-7. Do not include address blocks, dates, or "Sincerely" — just the body paragraphs.
+4. Naturally include the portfolio URL near the end: "You can explore more of my work at ${portfolioUrl}"
+5. Close confidently: express interest in next steps without begging.
+6. Tone: professional but warm. First-person. Active voice. No fluff.
+7. Length: 3-4 short paragraphs. No headers. Plain text, not markdown.
+8. Do not include address blocks, dates, or "Sincerely" — just the body paragraphs.
 
 Output only the cover letter body. Nothing else.`
 

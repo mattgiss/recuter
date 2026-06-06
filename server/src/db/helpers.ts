@@ -251,3 +251,73 @@ export async function linkApplicationDocuments(
 
   if (error) throw new Error(`linkApplicationDocuments failed: ${error.message}`)
 }
+
+// ── Apply step (review-first automation) ──────────────────────────────────────
+
+export interface PreparedApplication {
+  applicationId: string
+  jobId: string
+  jobUrl: string
+  jobTitle: string
+  company: string
+  source: string
+  resumeContent: string
+  coverLetterContent: string | null
+}
+
+/**
+ * Applications whose documents are drafted (status 'draft', resume attached) and
+ * whose job is still 'queued' — i.e. ready for Recuter to fill in on LinkedIn.
+ * Fetched with simple sequential reads to keep the query robust.
+ */
+export async function getPreparedApplications(sourceFilter?: string): Promise<PreparedApplication[]> {
+  const { data: apps, error } = await db
+    .from('applications')
+    .select('id, job_id, resume_id, cover_letter_id')
+    .eq('status', 'draft')
+    .not('resume_id', 'is', null)
+
+  if (error) throw new Error(`getPreparedApplications failed: ${error.message}`)
+
+  const out: PreparedApplication[] = []
+  for (const a of apps ?? []) {
+    const { data: job } = await db
+      .from('jobs')
+      .select('url, title, status, source, employer_id')
+      .eq('id', a.job_id)
+      .maybeSingle()
+
+    if (!job || job.status !== 'queued') continue
+    if (sourceFilter && job.source !== sourceFilter) continue
+
+    const { data: emp } = job.employer_id
+      ? await db.from('employers').select('name').eq('id', job.employer_id).maybeSingle()
+      : { data: null }
+
+    const { data: res } = await db.from('resumes').select('content').eq('id', a.resume_id).maybeSingle()
+    const { data: cl } = a.cover_letter_id
+      ? await db.from('cover_letters').select('content').eq('id', a.cover_letter_id).maybeSingle()
+      : { data: null }
+
+    out.push({
+      applicationId: a.id as string,
+      jobId: a.job_id as string,
+      jobUrl: job.url as string,
+      jobTitle: job.title as string,
+      company: (emp?.name as string) ?? '',
+      source: job.source as string,
+      resumeContent: (res?.content as string) ?? '',
+      coverLetterContent: (cl?.content as string) ?? null,
+    })
+  }
+  return out
+}
+
+/** Mark an application as prepped-and-awaiting-your-submit; move job to 'applying'. */
+export async function markApplicationPrepared(applicationId: string, jobId: string): Promise<void> {
+  await db
+    .from('applications')
+    .update({ platform: 'linkedin', notes: 'Prepared by Recuter — awaiting your review & submit' })
+    .eq('id', applicationId)
+  await db.from('jobs').update({ status: 'applying' }).eq('id', jobId)
+}

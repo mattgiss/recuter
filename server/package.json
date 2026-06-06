@@ -5,6 +5,7 @@
   "scripts": {
     "scrape": "ts-node src/scrapers/run.ts",
     "score": "ts-node src/agents/run.ts",
+    "apply": "ts-node src/apply/run.ts",
     "dbr": "ts-node src/notifications/dbr.ts",
     "dev": "ts-node src/index.ts",
     "build": "tsc --noEmit"
@@ -14,7 +15,8 @@
     "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.6.5",
     "cheerio": "^1.0.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "playwright": "^1.60.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

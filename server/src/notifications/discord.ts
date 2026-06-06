@@ -107,6 +107,23 @@ export async function notifyNewJob(job: JobNotification): Promise<void> {
   await postThread(`${job.title} at ${job.company}`, posts)
 }
 
+/** Ping when applications are filled in and waiting for the user's submit. */
+export async function notifyReadyToApply(
+  items: Array<{ jobTitle: string; company: string; jobUrl: string }>
+): Promise<void> {
+  if (!WEBHOOK || items.length === 0) return
+
+  const n = items.length
+  const lead =
+    n === 1
+      ? 'prepped an application for you — filled in and ready. just need your ok to hit submit.'
+      : `prepped ${n} applications for you — all filled in and ready. just need your ok to hit submit.`
+
+  const list = items.map(i => `• [${i.jobTitle} at ${i.company}](${i.jobUrl})`).join('\n')
+
+  await postThread('ready for your ok', [{ text: lead }, { text: list }])
+}
+
 export interface DBRStats {
   date: string
   jobsFoundToday: number

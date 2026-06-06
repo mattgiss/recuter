@@ -57,8 +57,7 @@ async function main() {
   console.log(`  Target: GIS roles | Denver/Remote | $${(SEARCH.salaryMinGross / 1000).toFixed(0)}k+ gross`)
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-  const runId = await startScraperRun('all')
-
+  // Scrape first — DB errors won't block discovery
   const results = await Promise.allSettled([
     runScraper('usajobs', () =>
       scrapeUSAJobs(SEARCH.keywords, SEARCH.salaryMinGross)
@@ -84,13 +83,23 @@ async function main() {
   }
 
   console.log(`\n[persist] Saving ${allJobs.length} total listings to database...`)
-  const { saved, dupes } = await persist(allJobs, runId)
+  let saved = 0
+  let dupes = 0
+  let runId: string | null = null
 
-  await finishScraperRun(runId, {
-    jobsFound: allJobs.length,
-    jobsNew: saved,
-    error: errors.length ? errors.join('; ') : undefined,
-  })
+  try {
+    runId = await startScraperRun('all')
+    ;({ saved, dupes } = await persist(allJobs, runId))
+    await finishScraperRun(runId, {
+      jobsFound: allJobs.length,
+      jobsNew: saved,
+      error: errors.length ? errors.join('; ') : undefined,
+    })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[db] Could not save to database: ${msg}`)
+    console.log('[db] Jobs were scraped successfully — fix DB connection and re-run to persist.')
+  }
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log(`  Done.`)

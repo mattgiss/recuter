@@ -10,89 +10,104 @@ on:
   release:
     types: [published]
 
+# Recuter shares its own progress in the server — first person, friendly.
+# Technical detail lives behind the GitHub links; the messages stay human.
+env:
+  AVATAR: https://raw.githubusercontent.com/mattgiss/recuter/main/assets/recuter-avatar.png
+
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Notify on push
+      - name: Recuter shares an update (push)
         if: github.event_name == 'push'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
-          ACTOR: ${{ github.actor }}
-          REF_NAME: ${{ github.ref_name }}
           COMPARE_URL: ${{ github.event.compare }}
-          REPO: ${{ github.repository }}
         run: |
+          # Use just the first line of the commit message as the headline.
+          HEADLINE=$(printf '%s' "$COMMIT_MSG" | head -n1)
           PAYLOAD=$(jq -n \
-            --arg thread_name "[$REPO] Push to $REF_NAME" \
-            --arg desc "**$ACTOR** pushed to \`$REF_NAME\`\n$COMMIT_MSG\n\n$COMPARE_URL" \
-            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:3066993}]}')
+            --arg username "Recuter" \
+            --arg avatar "$AVATAR" \
+            --arg thread_name "✨ I just got an upgrade" \
+            --arg desc "I picked up something new: **$HEADLINE**. I'm always getting a little better at helping you land the right role. Peek under the hood here → $COMPARE_URL" \
+            --arg icon "$AVATAR" \
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:4188671}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
-      - name: Notify on pull request
+      - name: Recuter shares an update (pull request)
         if: github.event_name == 'pull_request'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          ACTOR: ${{ github.actor }}
           ACTION: ${{ github.event.action }}
           MERGED: ${{ github.event.pull_request.merged }}
-          REPO: ${{ github.repository }}
         run: |
           if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
-            LABEL="PR merged"
-            COLOR=7419530
+            THREAD="🎉 New skill unlocked"
+            DESC="Good news — I just learned something new: **$PR_TITLE**. It's live now. Details here → $PR_URL"
+            COLOR=16726996
           elif [ "$ACTION" = "closed" ]; then
-            LABEL="PR closed"
-            COLOR=9807270
+            THREAD="📎 Shelved an idea"
+            DESC="I set aside a change for now: **$PR_TITLE**. Nothing to worry about. → $PR_URL"
+            COLOR=8010751
           else
-            LABEL="PR opened"
-            COLOR=3447003
+            THREAD="🛠️ Working on something new"
+            DESC="I'm putting together a new improvement: **$PR_TITLE**. I'll let you know when it's ready. → $PR_URL"
+            COLOR=4188671
           fi
           PAYLOAD=$(jq -n \
-            --arg thread_name "[$REPO] $LABEL: $PR_TITLE" \
-            --arg desc "by **$ACTOR**\n\n$PR_URL" \
+            --arg username "Recuter" \
+            --arg avatar "$AVATAR" \
+            --arg thread_name "$THREAD" \
+            --arg desc "$DESC" \
+            --arg icon "$AVATAR" \
             --argjson color "$COLOR" \
-            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:$color}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
-      - name: Notify on issue
+      - name: Recuter shares an update (issue)
         if: github.event_name == 'issues'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
-          ACTOR: ${{ github.actor }}
           ACTION: ${{ github.event.action }}
-          REPO: ${{ github.repository }}
         run: |
           if [ "$ACTION" = "opened" ]; then
-            LABEL="Issue opened"
-            COLOR=15158332
+            THREAD="📝 Something on my list"
+            DESC="I've noted something to look into: **$ISSUE_TITLE**. I'm on it. → $ISSUE_URL"
+            COLOR=16757844
           else
-            LABEL="Issue closed"
-            COLOR=3066993
+            THREAD="✅ Sorted that out"
+            DESC="Handled it — **$ISSUE_TITLE** is taken care of. → $ISSUE_URL"
+            COLOR=4188671
           fi
           PAYLOAD=$(jq -n \
-            --arg thread_name "[$REPO] $LABEL: $ISSUE_TITLE" \
-            --arg desc "by **$ACTOR**\n\n$ISSUE_URL" \
+            --arg username "Recuter" \
+            --arg avatar "$AVATAR" \
+            --arg thread_name "$THREAD" \
+            --arg desc "$DESC" \
+            --arg icon "$AVATAR" \
             --argjson color "$COLOR" \
-            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:$color}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
-      - name: Notify on release
+      - name: Recuter shares an update (release)
         if: github.event_name == 'release'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
-          ACTOR: ${{ github.actor }}
-          REPO: ${{ github.repository }}
         run: |
           PAYLOAD=$(jq -n \
-            --arg thread_name "[$REPO] New release: $RELEASE_NAME" \
-            --arg desc "Published by **$ACTOR**\n\n$RELEASE_URL" \
-            '{username:"GitHub",thread_name:$thread_name,embeds:[{description:$desc,color:16766720}]}')
+            --arg username "Recuter" \
+            --arg avatar "$AVATAR" \
+            --arg thread_name "🚀 A new version of me is live" \
+            --arg desc "I just leveled up — **$RELEASE_NAME** is here. Even better at finding and landing the right roles for you. → $RELEASE_URL" \
+            --arg icon "$AVATAR" \
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:16726996}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"

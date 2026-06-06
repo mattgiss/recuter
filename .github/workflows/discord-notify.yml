@@ -10,8 +10,8 @@ on:
   release:
     types: [published]
 
-# Recuter shares its own progress in the server — first person, friendly.
-# Technical detail lives behind the GitHub links; the messages stay human.
+# Recuter shares its own progress in the server — short and casual, like a
+# Bluesky/Threads post. Technical detail lives behind the GitHub links.
 env:
   AVATAR: https://raw.githubusercontent.com/mattgiss/recuter/main/assets/recuter-avatar.png
 
@@ -26,15 +26,13 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMPARE_URL: ${{ github.event.compare }}
         run: |
-          # Use just the first line of the commit message as the headline.
           HEADLINE=$(printf '%s' "$COMMIT_MSG" | head -n1)
           PAYLOAD=$(jq -n \
             --arg username "Recuter" \
             --arg avatar "$AVATAR" \
-            --arg thread_name "✨ I just got an upgrade" \
-            --arg desc "I picked up something new: **$HEADLINE**. I'm always getting a little better at helping you land the right role. Peek under the hood here → $COMPARE_URL" \
-            --arg icon "$AVATAR" \
-            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:4188671}]}')
+            --arg thread_name "shipped an update" \
+            --arg desc "just pushed an update — **$HEADLINE**. getting a little better at this. [details]($COMPARE_URL)" \
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{description:$desc,color:4188671}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Recuter shares an update (pull request)
@@ -47,16 +45,16 @@ jobs:
           MERGED: ${{ github.event.pull_request.merged }}
         run: |
           if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
-            THREAD="🎉 New skill unlocked"
-            DESC="Good news — I just learned something new: **$PR_TITLE**. It's live now. Details here → $PR_URL"
+            THREAD="shipped something new"
+            DESC="just shipped **$PR_TITLE**. it's live now. [details]($PR_URL)"
             COLOR=16726996
           elif [ "$ACTION" = "closed" ]; then
-            THREAD="📎 Shelved an idea"
-            DESC="I set aside a change for now: **$PR_TITLE**. Nothing to worry about. → $PR_URL"
+            THREAD="shelved an idea"
+            DESC="set this one aside for now — **$PR_TITLE**. [link]($PR_URL)"
             COLOR=8010751
           else
-            THREAD="🛠️ Working on something new"
-            DESC="I'm putting together a new improvement: **$PR_TITLE**. I'll let you know when it's ready. → $PR_URL"
+            THREAD="working on something"
+            DESC="working on something new — **$PR_TITLE**. i'll let you know when it's ready. [take a look]($PR_URL)"
             COLOR=4188671
           fi
           PAYLOAD=$(jq -n \
@@ -64,9 +62,8 @@ jobs:
             --arg avatar "$AVATAR" \
             --arg thread_name "$THREAD" \
             --arg desc "$DESC" \
-            --arg icon "$AVATAR" \
             --argjson color "$COLOR" \
-            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:$color}]}')
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Recuter shares an update (issue)
@@ -78,12 +75,12 @@ jobs:
           ACTION: ${{ github.event.action }}
         run: |
           if [ "$ACTION" = "opened" ]; then
-            THREAD="📝 Something on my list"
-            DESC="I've noted something to look into: **$ISSUE_TITLE**. I'm on it. → $ISSUE_URL"
+            THREAD="noted something"
+            DESC="noted something to look into — **$ISSUE_TITLE**. on it. [link]($ISSUE_URL)"
             COLOR=16757844
           else
-            THREAD="✅ Sorted that out"
-            DESC="Handled it — **$ISSUE_TITLE** is taken care of. → $ISSUE_URL"
+            THREAD="sorted that out"
+            DESC="handled it — **$ISSUE_TITLE** is taken care of. [link]($ISSUE_URL)"
             COLOR=4188671
           fi
           PAYLOAD=$(jq -n \
@@ -91,9 +88,8 @@ jobs:
             --arg avatar "$AVATAR" \
             --arg thread_name "$THREAD" \
             --arg desc "$DESC" \
-            --arg icon "$AVATAR" \
             --argjson color "$COLOR" \
-            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:$color}]}')
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{description:$desc,color:$color}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"
 
       - name: Recuter shares an update (release)
@@ -106,8 +102,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg username "Recuter" \
             --arg avatar "$AVATAR" \
-            --arg thread_name "🚀 A new version of me is live" \
-            --arg desc "I just leveled up — **$RELEASE_NAME** is here. Even better at finding and landing the right roles for you. → $RELEASE_URL" \
-            --arg icon "$AVATAR" \
-            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{author:{name:"Recuter",icon_url:$icon},description:$desc,color:16726996}]}')
+            --arg thread_name "new version's live" \
+            --arg desc "new version's live — **$RELEASE_NAME**. even better at finding the right roles for you. [release notes]($RELEASE_URL)" \
+            '{username:$username,avatar_url:$avatar,thread_name:$thread_name,embeds:[{description:$desc,color:16726996}]}')
           curl -sf -X POST "$DISCORD_WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD"

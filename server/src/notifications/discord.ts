@@ -2,37 +2,69 @@ import axios from 'axios'
 
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL
 
-// Recuter's identity on every message — a friendly companion, not a build log.
+// Recuter's identity on every message — shown via the webhook username + avatar.
 const AVATAR_URL =
   process.env.RECUTER_AVATAR_URL ??
   'https://raw.githubusercontent.com/mattgiss/recuter/main/assets/recuter-avatar.png'
 const IDENTITY = { username: 'Recuter', avatar_url: AVATAR_URL }
 
-// Recuter's signature palette (cyberpunk cyan → magenta)
+// Subtle accent stripe on the left of each post (cyberpunk cyan / magenta).
 const CYAN = 0x3fe9ff
-const VIOLET = 0x7a3bff
 const MAGENTA = 0xff3bd4
-const SUNRISE = 0xffb454
 
-/** Translate an internal 1–10 score into warm, human language. No numbers leak out. */
-function matchFeel(score: number): { label: string; color: number; opener: string } {
-  if (score >= 9)
-    return {
-      label: '💫 Perfect fit',
-      color: MAGENTA,
-      opener: "Okay, I had to stop and tell you about this one — it's *you* on paper.",
-    }
-  if (score >= 8)
-    return {
-      label: '✨ Excellent fit',
-      color: VIOLET,
-      opener: "I found something I think you're going to really like.",
-    }
-  return {
-    label: '⭐ Strong fit',
-    color: CYAN,
-    opener: "Spotted a role worth a look — it lines up nicely with your strengths.",
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+interface Post {
+  text: string
+  // optional clickable headline
+  title?: string
+  url?: string
+  color?: number
+}
+
+/**
+ * Post a short "thread" to the Discord forum, Bluesky/Threads style:
+ * the first post opens the forum thread, the rest land as quick replies
+ * in that same thread a beat later.
+ */
+async function postThread(threadName: string, posts: Post[]): Promise<void> {
+  if (!WEBHOOK || posts.length === 0) return
+  const headers = { 'Content-Type': 'application/json' }
+
+  const toEmbed = (p: Post) => ({
+    ...(p.title ? { title: p.title } : {}),
+    ...(p.url ? { url: p.url } : {}),
+    description: p.text,
+    color: p.color ?? CYAN,
+  })
+
+  // First post creates the forum thread.
+  const first = await axios.post(
+    `${WEBHOOK}?wait=true`,
+    { ...IDENTITY, thread_name: threadName.slice(0, 100), embeds: [toEmbed(posts[0])] },
+    { headers }
+  )
+
+  const threadId: string | undefined = first.data?.channel_id
+  if (!threadId) return
+
+  // Remaining posts reply into the same thread, like a Threads chain.
+  for (const p of posts.slice(1)) {
+    await sleep(700)
+    await axios.post(
+      `${WEBHOOK}?wait=true&thread_id=${threadId}`,
+      { ...IDENTITY, embeds: [toEmbed(p)] },
+      { headers }
+    )
   }
+}
+
+function opener(score: number): string {
+  if (score >= 9) return "okay, this one's basically you on paper."
+  if (score >= 8) return "found one i think you'll actually like."
+  return 'spotted something worth a look.'
 }
 
 export interface JobNotification {
@@ -49,45 +81,30 @@ export interface JobNotification {
   source: string
 }
 
-/** Tell Matt — like a friend would — about a role I found and prepped for him. */
+/** Tell Matt about a role, like a quick chain of casual posts. */
 export async function notifyNewJob(job: JobNotification): Promise<void> {
   if (!WEBHOOK) return
-
-  const feel = matchFeel(job.score)
 
   const pay =
     job.salaryRaw ??
     (job.salaryMin
       ? `$${job.salaryMin.toLocaleString()}${job.salaryMax ? `–$${job.salaryMax.toLocaleString()}` : '+'}`
-      : 'Not posted (I can ask)')
+      : null)
 
-  await axios.post(
-    `${WEBHOOK}?wait=true`,
+  const payLine = pay ? `pay's around ${pay}. ` : 'no salary posted, but i can ask. '
+
+  const posts: Post[] = [
     {
-      ...IDENTITY,
-      thread_name: `${feel.label} — ${job.title} at ${job.company}`,
-      embeds: [
-        {
-          author: { name: 'Recuter', icon_url: AVATAR_URL },
-          title: `${job.title} · ${job.company}`,
-          url: job.url,
-          color: feel.color,
-          description:
-            `${feel.opener}\n\n` +
-            `**${job.company}** is hiring a **${job.title}**${job.location ? ` in ${job.location}` : ''}, ` +
-            `and I've already drafted a tailored résumé and cover letter for you.`,
-          fields: [
-            { name: '💰 Pay', value: pay, inline: true },
-            { name: '📍 Where', value: job.location ?? 'Flexible / Remote', inline: true },
-            { name: '💭 Why I picked this for you', value: job.reasoning.slice(0, 1000), inline: false },
-          ],
-          footer: { text: "Your résumé & cover letter are ready — just say the word and I'll apply." },
-          timestamp: new Date().toISOString(),
-        },
-      ],
+      title: `${job.title} at ${job.company}`,
+      url: job.url,
+      text: `${opener(job.score)}${job.location ? ` it's in ${job.location}.` : ''}`,
+      color: job.score >= 9 ? MAGENTA : CYAN,
     },
-    { headers: { 'Content-Type': 'application/json' } }
-  )
+    { text: `why it caught my eye — ${job.reasoning.slice(0, 900)}` },
+    { text: `${payLine}already drafted your resume and cover letter. want me to send it?` },
+  ]
+
+  await postThread(`${job.title} at ${job.company}`, posts)
 }
 
 export interface DBRStats {
@@ -105,72 +122,44 @@ export interface DBRStats {
   scraperErrors: string[]
 }
 
-/** A warm morning check-in from Recuter — the day's job search, in plain language. */
+/** A short, casual morning check-in — posted as a little thread. */
 export async function postDailyBusinessReview(stats: DBRStats): Promise<void> {
   if (!WEBHOOK) {
     console.error('[discord] DISCORD_WEBHOOK_URL not set — cannot post the morning note')
     return
   }
 
-  // Lead line adapts to how the search is going — never robotic.
   let lead: string
   if (stats.highScoringToday >= 3) {
-    lead = `Good morning ☀️ It was a strong night — I found **${stats.highScoringToday} roles** I think you'll genuinely like.`
+    lead = `morning. good night for it — i found ${stats.highScoringToday} roles i think you'll like.`
   } else if (stats.highScoringToday >= 1) {
-    lead = `Good morning ☀️ I found **${stats.highScoringToday}** role${stats.highScoringToday > 1 ? 's' : ''} worth your time while you slept.`
+    lead = `morning. found ${stats.highScoringToday} role${stats.highScoringToday > 1 ? 's' : ''} worth your time while you slept.`
   } else if (stats.jobsFoundToday > 0) {
-    lead = `Good morning ☀️ I went through **${stats.jobsFoundToday}** new openings overnight. Nothing was a strong-enough fit to bother you with yet — I'm holding out for the right ones.`
+    lead = `morning. went through ${stats.jobsFoundToday} new postings overnight — nothing strong enough to flag yet. holding out for the right ones.`
   } else {
-    lead = `Good morning ☀️ Quiet night on the boards — no new openings came through. I'll keep watching today.`
+    lead = `morning. quiet night, no new postings came through. still watching.`
   }
 
-  // Friendly summary sentence about what's in flight.
-  const pipelineBits: string[] = []
-  if (stats.applicationsApplied > 0) pipelineBits.push(`**${stats.applicationsApplied}** application${stats.applicationsApplied > 1 ? 's' : ''} out the door`)
-  if (stats.applicationsQueued > 0) pipelineBits.push(`**${stats.applicationsQueued}** ready for your go-ahead`)
-  const pipelineLine = pipelineBits.length
-    ? `Where things stand: ${pipelineBits.join(' · ')}.`
-    : `Nothing in flight yet — once you give me the nod, I'll start sending applications.`
+  const posts: Post[] = [{ text: lead }]
 
-  const topJobsText = stats.topJobs.length
-    ? stats.topJobs
-        .map(j => `• **[${j.title} at ${j.company}](${j.url})**${j.location ? ` — ${j.location}` : ''}`)
-        .join('\n')
-    : "_Nothing to highlight today — I only surface roles I'd actually stake my reputation on._"
+  if (stats.topJobs.length) {
+    const list = stats.topJobs
+      .map(j => `• [${j.title} at ${j.company}](${j.url})${j.location ? ` — ${j.location}` : ''}`)
+      .join('\n')
+    posts.push({ text: `worth a look:\n${list}` })
+  }
 
-  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: '📋 Your search, right now', value: pipelineLine, inline: false },
-    { name: '🌟 Worth a look', value: topJobsText, inline: false },
-  ]
+  const bits: string[] = []
+  if (stats.applicationsApplied > 0)
+    bits.push(`${stats.applicationsApplied} application${stats.applicationsApplied > 1 ? 's' : ''} out`)
+  if (stats.applicationsQueued > 0) bits.push(`${stats.applicationsQueued} ready for your ok`)
+  if (bits.length) posts.push({ text: `where things stand: ${bits.join(', ')}.` })
 
-  // If a board was unreachable, mention it gently — no stack traces, no jargon.
   if (stats.scraperErrors.length) {
-    fields.push({
-      name: '🔧 Heads up',
-      value: "I had trouble reaching one of the job boards overnight. No worries — I'll automatically try again. Nothing for you to do.",
-      inline: false,
+    posts.push({
+      text: "heads up — had trouble reaching one of the job boards overnight. i'll retry automatically, nothing for you to do.",
     })
   }
 
-  const color = stats.highScoringToday >= 1 ? SUNRISE : CYAN
-
-  await axios.post(
-    `${WEBHOOK}?wait=true`,
-    {
-      ...IDENTITY,
-      thread_name: `☀️ Your morning briefing — ${stats.date}`,
-      embeds: [
-        {
-          author: { name: 'Recuter', icon_url: AVATAR_URL },
-          title: `Your morning briefing · ${stats.date}`,
-          color,
-          description: `${lead}`,
-          fields,
-          footer: { text: "I'm on it around the clock. Talk soon — Recuter" },
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    },
-    { headers: { 'Content-Type': 'application/json' } }
-  )
+  await postThread(`morning — ${stats.date}`, posts)
 }

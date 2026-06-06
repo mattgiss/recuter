@@ -3,6 +3,8 @@
 An AI agent that wins the race to "Apply" on perfect-fit job postings — built like a sneaker bot, aimed at the GIS job market.
 
 **Live:** [recuter.com](https://recuter.com) (coming soon landing page)
+
+**Notifications:** GitHub activity posts to Discord automatically.
 **Stack (landing):** static HTML + Supabase (waitlist) + Vercel (host) + GitHub (source)
 
 ---

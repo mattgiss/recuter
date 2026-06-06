@@ -69,8 +69,44 @@ In Gmail (or wherever your alerts land):
 That's it. New alert lands → Recuter parses it → you get a Discord ping for any
 strong match, resume and cover letter already drafted.
 
+## Recruiter replies → drafted responses
+
+The same address handles **replies from recruiters and hiring managers**, not
+just alerts. Forward (or auto-forward) those emails to the same intake address.
+Recuter tells a personal reply from a job-alert digest automatically:
+
+- **Job-alert digest** → postings extracted into the pipeline (above).
+- **Personal reply** (interview invite, screening questions, scheduling, an
+  offer, a rejection) → stored as an email thread that "needs a reply".
+
+Then, on your machine:
+
+```bash
+npm run inbox
+```
+
+For each waiting reply, Recuter:
+
+1. classifies it (interview request / screening questions / scheduling / offer /
+   rejection / recruiter outreach),
+2. links it to the matching application + employer where it can,
+3. drafts a response **in your voice** (tuned in `src/agents/profile.ts` →
+   `voice`), and
+4. pings you on Discord with a quick read **and the full draft** — copy, tweak,
+   send. Recuter never sends on its own.
+
+Tune how these sound by editing the `voice` block in
+`server/src/agents/profile.ts` (sign-off, tone, interview availability).
+
+To forward replies in Gmail, add a filter for mail **to** your own address that
+is a reply (e.g. `subject:re` from recruiting domains) → forward to the intake
+address. Or just forward them by hand as they arrive.
+
 ## Test it
 
 Forward any LinkedIn/Indeed job alert to your address. Within a minute the jobs
 should appear in the `jobs` table (status `new`). Run `npm run score` (or wait
 for the daily workflow) to score them and draft documents.
+
+Then forward a recruiter-style email and run `npm run inbox` — you'll get a
+drafted reply in Discord within a few seconds.

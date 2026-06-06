@@ -6,6 +6,7 @@
     "scrape": "ts-node src/scrapers/run.ts",
     "score": "ts-node src/agents/run.ts",
     "apply": "ts-node src/apply/run.ts",
+    "inbox": "ts-node src/inbox/run.ts",
     "dbr": "ts-node src/notifications/dbr.ts",
     "dev": "ts-node src/index.ts",
     "build": "tsc --noEmit"

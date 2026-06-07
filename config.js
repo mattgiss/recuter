@@ -2,8 +2,7 @@
 // See config.example.js for the shape.
 window.RECUTER_CONFIG = {
   SUPABASE_URL: "https://jttvbcmfwbfrjxwgrmzq.supabase.co",
-  // 👇 PASTE YOUR ANON KEY BETWEEN THE QUOTES (starts with "eyJ...").
-  //    Supabase → Settings → API Keys → "anon / public". Safe to commit
-  //    only because RLS is now enabled. Never put the service_role key here.
-  SUPABASE_ANON_KEY: ""
+  // anon / public key (role: anon). Public-safe because RLS is enabled.
+  // Never replace this with the service_role key.
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0dHZiY21md2Jmcmp4d2dybXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDkyMDMsImV4cCI6MjA5NjA4NTIwM30.vYLWNr9Oy8OmbBejnkGbETK7YybSVLc2HQimcc4gw0U"
 };

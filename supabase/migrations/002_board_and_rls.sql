@@ -27,10 +27,11 @@ alter table public.follow_ups     enable row level security;
 alter table public.scraper_runs   enable row level security;
 
 -- ── 2. Curated public board view (safe columns only) ────────
--- Owned by postgres, so it reads the base tables even though anon cannot.
--- Exposes NO description, score_reasoning, raw_data, emails, or credentials.
--- Display status = the latest application's status, else the job's status.
-create or replace view public.board as
+-- security_invoker = false → the view runs as its OWNER (postgres), so it
+-- can read the base tables even though anon cannot. Anon only ever gets the
+-- columns selected here — NO description, score_reasoning, raw_data, emails,
+-- or credentials. Display status = latest application's status, else job's.
+create or replace view public.board with (security_invoker = false) as
 select
   j.id,
   j.title,

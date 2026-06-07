@@ -333,7 +333,7 @@
       const cfg = window.RECUTER_CONFIG || {};
       if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
         return state("info", "The board isn't connected yet",
-          "Add your Supabase URL and anon key in <code>config.js</code>, then create the <code>board</code> view (see <code>supabase-schema.sql</code>).");
+          "Add your Supabase URL and anon key in <code>config.js</code>, then apply migration <code>002_board_and_rls.sql</code> to create the <code>board</code> view.");
       }
       const supabase = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
@@ -345,7 +345,7 @@
       if (error) {
         console.error(error);
         return state("err", "Couldn't load the board",
-          "The <code>board</code> view may not exist yet, or anon can't read it. Run the view SQL in <code>supabase-schema.sql</code>.");
+          "The <code>board</code> view may not exist yet, or anon can't read it. Apply migration <code>002_board_and_rls.sql</code>.");
       }
       if (!data || !data.length) {
         return state("info", "No open roles on the board right now",

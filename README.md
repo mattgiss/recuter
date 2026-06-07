@@ -52,7 +52,8 @@ recuter/
   landing.html            ← the original coming-soon landing + waitlist (kept for reference)
   config.js               ← Supabase URL + anon key (filled in locally + on Vercel)
   config.example.js       ← template showing the shape of config.js
-  supabase-schema.sql     ← waitlist table (legacy) + the public `board` view
+  supabase/migrations/    ← backend tables (001) + RLS lockdown & `board` view (002)
+  supabase-schema.sql     ← legacy waitlist table (used by landing.html)
   vercel.json             ← security headers, clean URLs
   voice-memo-2026-06-03.md
   README.md
@@ -90,8 +91,10 @@ use the status chips at the top to filter, or "Everything" to see them all.
 ## Setup — one-time
 
 1. **Supabase project** already exists (it holds the agent backend). Grab its keys from Supabase → **Settings → API**: the **Project URL** and the **anon public** key.
-2. **Create the `board` view.** In Supabase → SQL Editor → New query, paste the `board` view block from `supabase-schema.sql` and run it. This grants the anon key read access to the view only.
-3. **Verify RLS** on the base tables (see the check at the bottom of `supabase-schema.sql`) so the anon key can't read them directly — only through the view.
+2. **Apply migration `002_board_and_rls.sql`** (via your migration flow, or paste it into Supabase → SQL Editor → Run). It enables RLS on the backend tables and creates the public `board` view with anon read access.
+3. **Verify RLS** is on for every backend table:
+   `select tablename, rowsecurity from pg_tables where schemaname='public';`
+   (all backend tables should read `true` — only the `board` view is anon-readable).
 4. **Fill in `config.js`** with the URL + anon key (the anon key is public-safe; service-role keys never go here).
 5. **Push to GitHub** (see Git workflow below).
 6. **Deploy.** Two options:

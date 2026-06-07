@@ -77,5 +77,30 @@ grant select on public.board to anon, authenticated;
 -- Check with:
 --   select tablename, rowsecurity from pg_tables
 --   where schemaname = 'public' order by tablename;
--- Any row with rowsecurity = false is readable directly by anon — enable
--- RLS on it:  alter table public.<name> enable row level security;
+-- Any row with rowsecurity = false is readable directly by anon.
+
+
+-- =====================================================================
+-- HARDENING (run once). As of 2026-06-07 the backend tables had RLS
+-- OFF, which — given Supabase's default grants — left them readable by
+-- the public anon key (credentials, emails, resumes, and all). Enabling
+-- RLS with no anon policy closes that: the service-role key (agent
+-- backend) and the postgres-owned `board` view still work; the anon key
+-- can no longer read these tables directly.
+--
+-- NOTE: this assumes the agent backend writes with the SERVICE-ROLE key.
+-- If any part of it uses the anon key, add a narrow policy instead.
+-- =====================================================================
+
+alter table public.applications   enable row level security;
+alter table public.contacts       enable row level security;
+alter table public.cover_letters  enable row level security;
+alter table public.credentials    enable row level security;
+alter table public.email_messages enable row level security;
+alter table public.email_threads  enable row level security;
+alter table public.employers      enable row level security;
+alter table public.follow_ups     enable row level security;
+alter table public.jobs           enable row level security;
+alter table public.resumes        enable row level security;
+alter table public.scraper_runs   enable row level security;
+-- (scraped_jobs and simple_logs already had RLS enabled.)

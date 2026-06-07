@@ -179,6 +179,52 @@
     }
     footer.foot a { color: var(--faint); text-decoration: none; }
     footer.foot a:hover { color: var(--fg); }
+
+    /* --- apply confirmation: a sheet that slides up so it's unmissable --- */
+    .toast-scrim {
+      position: fixed; inset: 0; background: rgba(13,18,26,0.45);
+      opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 40;
+    }
+    .toast-scrim.show { opacity: 1; pointer-events: auto; }
+    .toast {
+      position: fixed; left: 50%; bottom: 1rem; transform: translate(-50%, 150%);
+      width: min(440px, calc(100vw - 1.5rem));
+      background: var(--bg-2); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(13,18,26,0.25);
+      padding: 1.1rem 1.15rem 1.2rem; z-index: 50;
+      transition: transform .28s cubic-bezier(.2,.8,.2,1);
+    }
+    .toast.show { transform: translate(-50%, 0); }
+    .toast.err { border-color: var(--accent); }
+    .toast-head {
+      display: flex; align-items: center; gap: .55rem; font-weight: 800;
+      font-size: 1rem; margin: 0 0 .35rem;
+    }
+    .toast-badge {
+      flex: none; width: 1.5rem; height: 1.5rem; border-radius: 999px;
+      display: grid; place-items: center; color: #fff; font-size: .85rem; font-weight: 800;
+      background: var(--s-recommended);
+    }
+    .toast.err .toast-badge { background: var(--accent); }
+    .toast-role { color: var(--muted); font-weight: 700; }
+    .toast-body { margin: 0; font-size: .9rem; color: var(--muted); line-height: 1.5; }
+    .toast-steps { margin: .7rem 0 0; padding: 0; list-style: none; font-size: .86rem; }
+    .toast-steps li {
+      display: flex; gap: .55rem; align-items: flex-start; padding: .2rem 0; color: var(--muted);
+    }
+    .toast-steps .n {
+      flex: none; width: 1.25rem; height: 1.25rem; margin-top: .05rem; border-radius: 999px;
+      background: var(--bg-3); color: var(--fg); font-size: .72rem; font-weight: 800;
+      display: grid; place-items: center;
+    }
+    .toast-foot {
+      margin-top: .9rem; display: flex; justify-content: flex-end; gap: .5rem;
+    }
+    .toast-foot .btn { padding: .5rem .9rem; }
+    @media (prefers-reduced-motion: reduce) {
+      .toast, .toast-scrim { transition: none; }
+    }
   </style>
 </head>
 <body>
@@ -204,6 +250,11 @@
       <span>A rolling shortlist — listings stay up while they're still open.</span>
     </footer>
   </div>
+
+  <!-- Apply confirmation sheet (populated + toggled in JS) -->
+  <div class="toast-scrim" id="toast-scrim" hidden></div>
+  <div class="toast" id="toast" role="alertdialog" aria-modal="true"
+       aria-labelledby="toast-title" aria-describedby="toast-body" hidden></div>
 
   <script src="./config.js"></script>
   <script type="module">
@@ -265,6 +316,46 @@
       boardEl.innerHTML = `<div class="state ${kind === "err" ? "err" : ""}">
         <h2>${esc(title)}</h2><p>${body}</p></div>`;
     }
+
+    // --- apply confirmation sheet -------------------------------------------
+    const toastEl  = document.getElementById("toast");
+    const scrimEl  = document.getElementById("toast-scrim");
+    let toastTimer = null;
+
+    function hideToast() {
+      clearTimeout(toastTimer);
+      toastEl.classList.remove("show");
+      scrimEl.classList.remove("show");
+      // wait for the slide-out before hiding from the a11y tree
+      setTimeout(() => { toastEl.hidden = true; scrimEl.hidden = true; }, 300);
+    }
+
+    // kind: "ok" | "err". opts: { title, role, body, steps:[], autoClose:bool }
+    function showToast(kind, opts) {
+      clearTimeout(toastTimer);
+      const steps = opts.steps && opts.steps.length
+        ? `<ol class="toast-steps">${opts.steps.map((s, i) =>
+            `<li><span class="n">${i + 1}</span><span>${s}</span></li>`).join("")}</ol>`
+        : "";
+      toastEl.className = "toast" + (kind === "err" ? " err" : "");
+      toastEl.innerHTML = `
+        <p class="toast-head" id="toast-title">
+          <span class="toast-badge">${kind === "err" ? "!" : "✓"}</span>
+          <span>${esc(opts.title)}${opts.role ? ` <span class="toast-role">· ${esc(opts.role)}</span>` : ""}</span>
+        </p>
+        <p class="toast-body" id="toast-body">${opts.body}</p>
+        ${steps}
+        <div class="toast-foot">
+          <button class="btn" data-toast-close type="button">${kind === "err" ? "Close" : "Got it"}</button>
+        </div>`;
+      toastEl.hidden = false; scrimEl.hidden = false;
+      // next frame so the transition runs
+      requestAnimationFrame(() => { toastEl.classList.add("show"); scrimEl.classList.add("show"); });
+      toastEl.querySelector("[data-toast-close]").addEventListener("click", hideToast);
+      if (opts.autoClose) toastTimer = setTimeout(hideToast, 9000);
+    }
+    scrimEl.addEventListener("click", hideToast);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !toastEl.hidden) hideToast(); });
 
     function salaryText(job) {
       if (job.salary_raw) return job.salary_raw;
@@ -392,20 +483,41 @@
         const btn = e.target.closest("[data-apply]");
         if (!btn || btn.disabled) return;
         const jobId = btn.dataset.apply;
+        const job = jobs.find((j) => j.id === jobId);
+        const roleLabel = job ? `${job.title} @ ${job.company}` : "this role";
+
         btn.disabled = true;
-        btn.textContent = "Queuing…";
+        btn.textContent = "Sending…";
         const { error: insErr } = await supabase.from("apply_requests").insert({ job_id: jobId });
+
         if (insErr) {
           console.error(insErr);
           btn.textContent = "Try again";
           btn.disabled = false;
+          showToast("err", {
+            title: "That didn't go through",
+            body: "Your request couldn't be saved just now — no application was started. Check your connection and tap <strong>Try again</strong>. If it keeps failing, the board may be briefly offline.",
+          });
           return;
         }
+
         requested.add(jobId);
         saveRequested();
         btn.textContent = "Requested ✓";
         btn.classList.remove("primary");
         btn.classList.add("requested");
+
+        showToast("ok", {
+          title: "Got it — recuter is on it",
+          role: roleLabel,
+          body: "Your request is in. Nothing is submitted to the employer yet — recuter prepares everything for review first.",
+          steps: [
+            "recuter tailors your <strong>résumé and cover letter</strong> to this exact posting.",
+            "It fills in the application and <strong>holds it for review</strong> — nothing goes out without a final check.",
+            "Once submitted, this card moves to <strong>Applied</strong> with the date, so you can always see where it stands here.",
+          ],
+          autoClose: true,
+        });
       });
 
       let active = "live";

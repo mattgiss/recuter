@@ -21,7 +21,8 @@
       --border: #1f242c;
       --border-2: #2a313b;
       /* status colors */
-      --s-recommended: #5cf2a3;
+      --s-new:         #5cf2a3;
+      --s-recommended: #5ad9f2;
       --s-offer:       #ffd166;
       --s-interviewing:#c08cff;
       --s-applied:     #7aa2ff;
@@ -200,13 +201,14 @@
     // --- status taxonomy: drives color, ordering, and the action shown ---
     // priority = lower sorts higher (action-first board)
     const STATUS = {
-      recommended:  { label: "Recommended", action: "Apply now — clears your bar",   color: "var(--s-recommended)", priority: 0, dead: false },
-      offer:        { label: "Offer",        action: "Offer on the table — decide",   color: "var(--s-offer)",       priority: 1, dead: false },
-      interviewing: { label: "Interviewing", action: "In process — prep",             color: "var(--s-interviewing)",priority: 2, dead: false },
-      applied:      { label: "Applied",      action: "Submitted — awaiting response", color: "var(--s-applied)",     priority: 3, dead: false },
-      closed:       { label: "Closed",       action: "Posting closed",                color: "var(--s-closed)",      priority: 4, dead: true  },
-      rejected:     { label: "Rejected",     action: "Not moving forward",            color: "var(--s-rejected)",    priority: 5, dead: true  },
-      passed:       { label: "Passed",       action: "You skipped this one",          color: "var(--s-passed)",      priority: 6, dead: true  }
+      new:          { label: "New",          action: "Fresh find — review & apply",   color: "var(--s-new)",         priority: 0, dead: false },
+      recommended:  { label: "Recommended",  action: "Apply now — clears your bar",    color: "var(--s-recommended)", priority: 1, dead: false },
+      offer:        { label: "Offer",        action: "Offer on the table — decide",    color: "var(--s-offer)",       priority: 2, dead: false },
+      interviewing: { label: "Interviewing", action: "In process — prep",              color: "var(--s-interviewing)",priority: 3, dead: false },
+      applied:      { label: "Applied",      action: "Submitted — awaiting response",  color: "var(--s-applied)",     priority: 4, dead: false },
+      closed:       { label: "Closed",       action: "Posting closed",                 color: "var(--s-closed)",      priority: 5, dead: true  },
+      rejected:     { label: "Rejected",     action: "Not moving forward",             color: "var(--s-rejected)",    priority: 6, dead: true  },
+      passed:       { label: "Passed",       action: "You skipped this one",           color: "var(--s-passed)",      priority: 7, dead: true  }
     };
     const fallback = (s) => ({ label: s || "Unknown", action: "", color: "var(--border-2)", priority: 9, dead: false });
     const meta = (s) => STATUS[s] || fallback(s);
@@ -270,7 +272,7 @@
         ? `<a href="${url}" target="_blank" rel="noopener">${esc(job.title)}</a>`
         : esc(job.title);
       const cta = url
-        ? `<a class="btn ${["recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" href="${url}" target="_blank" rel="noopener">${job.status === "recommended" ? "Apply" : "View posting"} ↗</a>`
+        ? `<a class="btn ${["new","recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" href="${url}" target="_blank" rel="noopener">${["new","recommended"].includes(job.status) ? "Apply" : "View posting"} ↗</a>`
         : "";
 
       return `<article class="card ${m.dead ? "is-dead" : ""}"

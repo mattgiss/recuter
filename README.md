@@ -65,15 +65,21 @@ if it's been applied to, otherwise the `jobs.status`. The page gives these known
 values a label, color, and ordering, and **falls back gracefully** for any other
 string (so new backend statuses still render):
 
-| status         | how it shows up                  |
-|----------------|----------------------------------|
-| `recommended`  | green, sorts to the top, "Apply" |
-| `offer`        | gold                             |
-| `interviewing` | purple                           |
-| `applied`      | blue                             |
-| `closed`       | dimmed                           |
-| `rejected`     | dimmed                           |
-| `passed`       | dimmed                           |
+| status         | how it shows up                       |
+|----------------|---------------------------------------|
+| `new`          | green, sorts to the top, "Apply"      |
+| `recommended`  | cyan, near the top, "Apply"           |
+| `offer`        | gold                                  |
+| `interviewing` | purple                                |
+| `applied`      | blue                                  |
+| `closed`       | dimmed                                |
+| `rejected`     | dimmed                                |
+| `passed`       | dimmed                                |
+
+Today every job in the backend is `status = 'new'` (and `applications` is empty),
+so the board is effectively your "to apply" pile. As the agent starts creating
+`applications` rows, those statuses (`applied`, `interviewing`, …) flow through
+automatically via the view's `coalesce(application.status, job.status)`.
 
 > The mapping is in `STATUS` at the top of the `index.html` module script — adjust
 > labels/colors there once the backend's real status vocabulary is confirmed.

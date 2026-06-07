@@ -63,7 +63,7 @@ export const DEFAULT_PROFILE: Profile = {
   email: 'matt@gissentanna.com',
   location: 'Brighton, CO',
   phone: '720-965-5369',
-  linkedin: '',
+  linkedin: 'linkedin.com/in/matthewgissentanna',
   github: 'github.com/mattgiss',
   portfolioUrl: 'https://mattgiss.github.io/recuter/portfolio/',
 

@@ -90,7 +90,7 @@ begin
       'matt@gissentanna.com',
       '720-965-5369',
       'Brighton, CO',
-      '',                       -- TODO: add LinkedIn URL
+      'linkedin.com/in/matthewgissentanna',
       'github.com/mattgiss',
       'https://mattgiss.github.io/recuter/portfolio/',
       'Geospatial and UAS professional transitioning into GIS, backed by 18+ years leading technical programs at Amazon/AWS, Rubrik, and beyond. FAA Part 107 remote pilot with hands-on commercial drone mapping, photogrammetry, and aerial data processing, currently completing a Graduate Certificate in GIS & Unmanned Aircraft Systems at the University of Denver. Pairs real field and sensor operations with deep experience building data pipelines, quality-assurance systems, and cross-functional execution.',

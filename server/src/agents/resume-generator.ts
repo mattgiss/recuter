@@ -15,11 +15,27 @@ export interface JobForDocs {
   url: string
 }
 
-const SYSTEM = `You are an expert technical resume writer specializing in GIS and geospatial careers.
+const SYSTEM = `You are an expert technical resume writer specializing in GIS, geospatial, and UAS careers.
 You write clean, ATS-optimized, truthful resumes in markdown format.
 You tailor each resume to match the specific job description's keywords and requirements.
 Never invent credentials, certifications, or experience the candidate does not have.
-Use the candidate's actual experience — reframe and emphasize the most relevant aspects.`
+The candidate is transitioning into GIS from a strong program-management background — lead
+with their geospatial/UAS/remote-sensing experience and credentials, and frame transferable
+data, automation, QA, and cross-functional work to support the target role.`
+
+// Humanize skill category keys for the resume's skills section.
+const SKILL_LABELS: Record<string, string> = {
+  geospatial: 'Geospatial & GIS',
+  remoteSensing: 'Remote Sensing',
+  uasOperations: 'UAS / Drone Operations',
+  programManagement: 'Program & Project Management',
+  technical: 'Technical',
+  tools: 'Tools & Platforms',
+  esri: 'ESRI', openSource: 'Open-Source GIS', programming: 'Programming',
+  databases: 'Databases', webGIS: 'Web GIS', domains: 'Domains',
+}
+const labelFor = (key: string): string =>
+  SKILL_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
 
 export async function generateResume(job: JobForDocs): Promise<string> {
   const profile = USER_PROFILE
@@ -35,6 +51,11 @@ ${e.highlights.map(h => `- ${h}`).join('\n')}`
   const certs = profile.certifications.length
     ? profile.certifications.map(c => `- ${c}`).join('\n')
     : ''
+
+  const skillLines = Object.entries(profile.skills)
+    .filter(([, list]) => list.length)
+    .map(([cat, list]) => `- ${labelFor(cat)}: ${list.join(', ')}`)
+    .join('\n')
 
   const prompt = `Create a customized, ATS-optimized resume for the job below.
 
@@ -61,12 +82,7 @@ ${edu}
 ${certs ? `\n**Certifications:**\n${certs}` : ''}
 
 **Skills:**
-- ESRI: ${profile.skills.esri.join(', ')}
-- Open Source GIS: ${profile.skills.openSource.join(', ')}
-- Programming: ${profile.skills.programming.join(', ')}
-- Databases: ${profile.skills.databases.join(', ')}
-- Web GIS: ${profile.skills.webGIS.join(', ')}
-- Domains: ${profile.skills.domains.join(', ')}
+${skillLines}
 
 ## INSTRUCTIONS
 1. Mirror keywords from the job description (ATS-critical).

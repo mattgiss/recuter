@@ -34,7 +34,7 @@ Name: ${profile.name}
 Location: ${profile.location}
 Email: ${profile.email}
 Most recent role: ${topExp}
-Core GIS skills: ${profile.skills.esri.slice(0, 4).join(', ')}, Python, PostGIS
+Core skills: ${Object.values(profile.skills).flat().slice(0, 8).join(', ')}
 Career summary: ${profile.summary}
 ${resumeContent ? `\nResume highlights:\n${resumeContent.slice(0, 800)}` : ''}
 

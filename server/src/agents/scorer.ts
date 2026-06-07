@@ -37,10 +37,15 @@ Location: ${USER_PROFILE.location} (willing to relocate: ${USER_PROFILE.willingT
 Target roles: ${USER_PROFILE.targetRoles.join(', ')}
 Salary target: $${USER_PROFILE.targetSalaryGrossMin.toLocaleString()}+ gross
 Summary: ${USER_PROFILE.summary}
-GIS Tools: ${USER_PROFILE.skills.esri.concat(USER_PROFILE.skills.openSource).join(', ')}
-Programming: ${USER_PROFILE.skills.programming.join(', ')}
-Domains: ${USER_PROFILE.skills.domains.join(', ')}
+Skills: ${Object.values(USER_PROFILE.skills).flat().join(', ')}
 Deal breakers: ${USER_PROFILE.dealBreakers.join('; ')}
+
+NOTE: The candidate is transitioning into GIS from a strong technical
+program-management background, with FAA Part 107 / drone mapping, remote
+sensing, and a GIS graduate certificate in progress. Score entry- and mid-level
+GIS, geospatial, UAS/drone, and remote-sensing roles favorably, and credit
+transferable data-pipeline, QA, and cross-functional experience. Don't penalize
+a role just for being entry/mid-level or not requiring a senior GIS engineer.
 
 ## JOB LISTING
 Title: ${job.title}
@@ -53,11 +58,11 @@ Description:
 ${job.description ?? '(no description available)'}
 
 ## SCORING RUBRIC
-10  — Perfect match: GIS-specific role, right salary, strong company, aligns with candidate's top skills
-8-9 — Strong match: GIS role with minor gaps (salary unlisted but likely fine, or adjacent domain)
-6-7 — Decent match: partial GIS component or salary borderline; worth applying if time allows
-4-5 — Weak match: vague GIS mention, mostly IT/admin, or salary likely too low
-1-3 — Poor match: no real GIS work, deal breaker present, or clear mismatch
+10  — Perfect match: GIS/geospatial/UAS/remote-sensing role at entry/mid level, right salary, strong fit with the candidate's skills
+8-9 — Strong match: clear GIS/geospatial/UAS role with minor gaps (salary unlisted, or leans senior but reachable)
+6-7 — Decent match: partial GIS/geospatial component, or transferable (data/QA/PM) role adjacent to geospatial; worth applying
+4-5 — Weak match: only a faint GIS/geospatial mention, mostly unrelated IT/admin, or salary likely too low
+1-3 — Poor match: no GIS/geospatial/UAS component at all, deal breaker present, or clear mismatch
 
 ## OUTPUT
 Return ONLY valid JSON, no other text:

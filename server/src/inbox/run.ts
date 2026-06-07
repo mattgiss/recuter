@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { initProfile } from '../agents/profile'
 import { draftReply } from '../agents/reply-writer'
 import {
   getThreadsNeedingReply,
@@ -19,6 +20,8 @@ async function main() {
     console.error('ERROR: ANTHROPIC_API_KEY is not set in .env')
     process.exit(1)
   }
+
+  await initProfile()
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('  recuter — inbox (drafting recruiter replies)')

@@ -322,6 +322,80 @@ export async function markApplicationPrepared(applicationId: string, jobId: stri
   await db.from('jobs').update({ status: 'applying' }).eq('id', jobId)
 }
 
+// ── Apply requests (the board's "Apply" button) ───────────────────────────────
+
+export interface ApplyRequest {
+  id: string
+  jobId: string
+}
+
+/** Pending apply requests submitted from the board. */
+export async function getPendingApplyRequests(): Promise<ApplyRequest[]> {
+  const { data, error } = await db
+    .from('apply_requests')
+    .select('id, job_id')
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true })
+
+  if (error) throw new Error(`getPendingApplyRequests failed: ${error.message}`)
+  return (data ?? []).map(r => ({ id: r.id as string, jobId: r.job_id as string }))
+}
+
+/** Mark an apply request handled. */
+export async function markApplyRequestDone(
+  id: string,
+  status: 'queued' | 'error',
+  note?: string
+): Promise<void> {
+  await db
+    .from('apply_requests')
+    .update({ status, note: note ?? null, processed_at: new Date().toISOString() })
+    .eq('id', id)
+}
+
+/** Fetch a single job by id, shaped for document generation. */
+export async function getJobById(jobId: string): Promise<RawJob | null> {
+  const { data, error } = await db
+    .from('jobs')
+    .select(`
+      id, title, location, salary_min, salary_max, salary_raw,
+      description, source, url, employer_id,
+      employers(name)
+    `)
+    .eq('id', jobId)
+    .maybeSingle()
+
+  if (error) throw new Error(`getJobById failed: ${error.message}`)
+  if (!data) return null
+
+  const row = data as Record<string, unknown>
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    company: (row.employers as Record<string, unknown>)?.name as string ?? '',
+    location: row.location as string | null,
+    salary_min: row.salary_min as number | null,
+    salary_max: row.salary_max as number | null,
+    salary_raw: row.salary_raw as string | null,
+    description: row.description as string | null,
+    source: row.source as string,
+    url: row.url as string,
+    employer_id: row.employer_id as string | null,
+  }
+}
+
+/** True if the job already has an application with a résumé attached. */
+export async function jobHasApplicationWithResume(jobId: string): Promise<boolean> {
+  const { data } = await db
+    .from('applications')
+    .select('id')
+    .eq('job_id', jobId)
+    .not('resume_id', 'is', null)
+    .limit(1)
+    .maybeSingle()
+  return !!data
+}
+
 // ── Inbox (recruiter replies → drafted responses) ─────────────────────────────
 
 export interface InboundThread {

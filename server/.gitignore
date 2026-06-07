@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+
+# LinkedIn automation — persistent browser session (keeps you logged in), never commit
+.linkedin-profile/
+# Generated application artifacts
+.artifacts/

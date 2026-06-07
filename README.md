@@ -3,7 +3,8 @@
 An AI agent that wins the race to "Apply" on perfect-fit job postings — built like a sneaker bot, aimed at the GIS job market.
 
 **Live:** [recuter.com](https://recuter.com) (the job board)
-**Stack:** static HTML + Supabase (`jobs` table) + Vercel (host) + GitHub (source)
+**Notifications:** GitHub activity posts to Discord automatically.
+**Stack:** static HTML board + Supabase backend + GitHub Pages / Vercel (host) + GitHub (source)
 
 ---
 
@@ -39,12 +40,11 @@ with where it stands in the pipeline. The board reads live from a Supabase **`bo
 view** using the public anon key (read-only).
 
 The actual data lives in the **agent backend** (the `jobs`, `employers`,
-`applications`, `scraped_jobs`, … tables — already in the Supabase project, not
-created by this repo). The website never touches those tables directly; it only
-reads the curated `board` view, which exposes a safe subset of columns and joins
-each job to its employer (company name) and most recent application (pipeline
-status). The agent that *fills* those tables is a separate workstream — see
-`voice-memo-2026-06-03.md`.
+`applications`, `scraped_jobs`, … tables — defined in `supabase/migrations/` and
+populated by the `server/` app). The website never touches those tables directly;
+it only reads the curated `board` view, which exposes a safe subset of columns and
+joins each job to its employer (company name) and most recent application (pipeline
+status). See `server/` for the scrapers/agents that *fill* those tables.
 
 ```
 recuter/

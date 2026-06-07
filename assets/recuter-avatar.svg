@@ -1,0 +1,177 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Translucent holographic shell: cyan core, magenta edge -->
+    <radialGradient id="shell" cx="42%" cy="36%" r="80%">
+      <stop offset="0%" stop-color="#d8ffff" stop-opacity="0.95"/>
+      <stop offset="30%" stop-color="#5cf2ff" stop-opacity="0.78"/>
+      <stop offset="62%" stop-color="#22b6ff" stop-opacity="0.62"/>
+      <stop offset="85%" stop-color="#7a4bff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ff2bb8" stop-opacity="0.65"/>
+    </radialGradient>
+
+    <radialGradient id="core" cx="50%" cy="48%" r="60%">
+      <stop offset="0%" stop-color="#0a2238" stop-opacity="0.0"/>
+      <stop offset="70%" stop-color="#08203a" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1a0840" stop-opacity="0.55"/>
+    </radialGradient>
+
+    <radialGradient id="rim" cx="50%" cy="50%" r="50%">
+      <stop offset="72%" stop-color="#00f0ff" stop-opacity="0"/>
+      <stop offset="90%" stop-color="#00f0ff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#ff2bb8" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="eyeGlow" cx="45%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="45%" stop-color="#7df9ff"/>
+      <stop offset="100%" stop-color="#0bb6ff"/>
+    </radialGradient>
+
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="13"/>
+    </filter>
+    <filter id="glowBig" x="-140%" y="-140%" width="380%" height="380%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+
+    <clipPath id="orbClip"><circle cx="256" cy="252" r="150"/></clipPath>
+  </defs>
+
+  <!-- ===== Acid-yellow cyberpunk backdrop ===== -->
+  <rect width="512" height="512" rx="120" fill="#f2ee00"/>
+  <rect width="512" height="512" rx="120" fill="#eae600"/>
+
+  <!-- Tech registration marks / barcode accents (Cyberpunk 2077 cover vibe) -->
+  <g fill="#1a1a00" opacity="0.55">
+    <rect x="34" y="40" width="6" height="46"/>
+    <rect x="44" y="40" width="3" height="46"/>
+    <rect x="50" y="40" width="7" height="46"/>
+    <rect x="61" y="40" width="3" height="46"/>
+    <rect x="67" y="40" width="5" height="46"/>
+    <rect x="446" y="430" width="6" height="40"/>
+    <rect x="456" y="430" width="3" height="40"/>
+    <rect x="462" y="430" width="7" height="40"/>
+    <rect x="473" y="430" width="4" height="40"/>
+  </g>
+  <g stroke="#1a1a00" stroke-width="2" opacity="0.4" fill="none">
+    <path d="M40 250 H96 V300"/>
+    <path d="M472 210 H420 V160"/>
+    <path d="M256 470 V440"/>
+  </g>
+  <g fill="#1a1a00" opacity="0.4" font-family="monospace" font-size="13" letter-spacing="2">
+    <text x="40" y="120">SYS//REC-7</text>
+    <text x="372" y="400">NO_COINCIDENCE</text>
+  </g>
+
+  <!-- Aura -->
+  <circle cx="256" cy="252" r="176" fill="#00e5ff" opacity="0.30" filter="url(#glowBig)"/>
+  <circle cx="256" cy="252" r="166" fill="#ff2bb8" opacity="0.22" filter="url(#glowBig)"/>
+
+  <!-- Rim ring -->
+  <circle cx="256" cy="252" r="160" fill="url(#rim)" filter="url(#soft)"/>
+
+  <!-- Translucent orb body -->
+  <circle cx="256" cy="252" r="150" fill="url(#shell)"/>
+
+  <!-- ===== Internal circuitry (x-ray hologram) ===== -->
+  <g clip-path="url(#orbClip)" stroke-linecap="round">
+    <!-- darker inner core to make traces pop -->
+    <circle cx="256" cy="252" r="150" fill="url(#core)"/>
+
+    <!-- circuit traces -->
+    <g stroke="#aeffff" stroke-width="2.4" fill="none" opacity="0.85">
+      <path d="M150 200 H210 V160"/>
+      <path d="M362 210 H300 V170"/>
+      <path d="M160 320 H230"/>
+      <path d="M360 318 H288"/>
+      <path d="M256 130 V172"/>
+      <path d="M186 360 V330 H226"/>
+      <path d="M330 360 V332 H290"/>
+      <path d="M150 256 H120"/>
+      <path d="M362 256 H392"/>
+    </g>
+    <!-- secondary magenta traces -->
+    <g stroke="#ff7ae6" stroke-width="1.8" fill="none" opacity="0.7">
+      <path d="M200 300 H312"/>
+      <path d="M176 230 H150"/>
+      <path d="M336 232 H362"/>
+      <path d="M256 332 V360"/>
+    </g>
+    <!-- nodes -->
+    <g fill="#eaffff">
+      <circle cx="210" cy="160" r="4"/>
+      <circle cx="300" cy="170" r="4"/>
+      <circle cx="120" cy="256" r="3.5"/>
+      <circle cx="392" cy="256" r="3.5"/>
+      <circle cx="186" cy="360" r="3.5"/>
+      <circle cx="330" cy="360" r="3.5"/>
+      <circle cx="256" cy="130" r="4"/>
+    </g>
+    <g fill="#ff8fe9">
+      <circle cx="150" cy="230" r="3"/>
+      <circle cx="362" cy="232" r="3"/>
+      <circle cx="256" cy="360" r="3"/>
+    </g>
+
+    <!-- glitch slices -->
+    <rect x="106" y="214" width="300" height="5" fill="#fbffff" opacity="0.5"/>
+    <rect x="118" y="292" width="276" height="3" fill="#ff5fd2" opacity="0.45"/>
+    <rect x="140" y="176" width="232" height="2" fill="#aeffff" opacity="0.4"/>
+
+    <!-- scanlines -->
+    <g stroke="#001018" stroke-width="1" opacity="0.10">
+      <path d="M110 240 H402"/>
+      <path d="M110 264 H402"/>
+      <path d="M110 288 H402"/>
+      <path d="M110 312 H402"/>
+    </g>
+
+    <!-- equator ellipse highlight -->
+    <ellipse cx="256" cy="270" rx="150" ry="40" fill="#ffffff" opacity="0.08"/>
+  </g>
+
+  <!-- Glossy top highlight -->
+  <ellipse cx="206" cy="184" rx="56" ry="40" fill="#ffffff" opacity="0.45" filter="url(#soft)"/>
+  <circle cx="182" cy="162" r="12" fill="#ffffff" opacity="0.85"/>
+
+  <!-- ===== Cute glowing face ===== -->
+  <g>
+    <!-- eye sockets (dark, like the cover's glowing sockets) -->
+    <ellipse cx="214" cy="256" rx="33" ry="40" fill="#05010f"/>
+    <ellipse cx="300" cy="256" rx="33" ry="40" fill="#05010f"/>
+    <!-- glowing irises -->
+    <circle cx="214" cy="258" r="23" fill="url(#eyeGlow)" filter="url(#soft)"/>
+    <circle cx="300" cy="258" r="23" fill="url(#eyeGlow)" filter="url(#soft)"/>
+    <circle cx="214" cy="258" r="20" fill="url(#eyeGlow)"/>
+    <circle cx="300" cy="258" r="20" fill="url(#eyeGlow)"/>
+    <!-- pink pupils (echo the cover's red eye glow, but cute) -->
+    <circle cx="219" cy="262" r="9" fill="#ff2bb8"/>
+    <circle cx="305" cy="262" r="9" fill="#ff2bb8"/>
+    <!-- catchlights -->
+    <circle cx="208" cy="248" r="6" fill="#ffffff"/>
+    <circle cx="294" cy="248" r="6" fill="#ffffff"/>
+  </g>
+
+  <!-- Cheeks -->
+  <ellipse cx="166" cy="300" rx="16" ry="9" fill="#ff3bd4" opacity="0.7" filter="url(#soft)"/>
+  <ellipse cx="346" cy="300" rx="16" ry="9" fill="#ff3bd4" opacity="0.7" filter="url(#soft)"/>
+
+  <!-- Happy mouth -->
+  <path d="M232 302 q24 24 48 0" fill="none" stroke="#aeffff" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Antenna -->
+  <line x1="256" y1="104" x2="256" y2="64" stroke="#aeffff" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="256" cy="56" r="11" fill="#ff2bb8"/>
+  <circle cx="256" cy="56" r="22" fill="#ff2bb8" opacity="0.5" filter="url(#glow)"/>
+
+  <!-- glitch ticks outside -->
+  <g fill="#1a1a00" opacity="0.5">
+    <rect x="408" y="120" width="26" height="5"/>
+    <rect x="408" y="130" width="14" height="5"/>
+    <rect x="80" y="392" width="26" height="5"/>
+    <rect x="92" y="402" width="14" height="5"/>
+  </g>
+</svg>

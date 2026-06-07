@@ -314,10 +314,14 @@ export async function getPreparedApplications(sourceFilter?: string): Promise<Pr
 }
 
 /** Mark an application as prepped-and-awaiting-your-submit; move job to 'applying'. */
-export async function markApplicationPrepared(applicationId: string, jobId: string): Promise<void> {
+export async function markApplicationPrepared(
+  applicationId: string,
+  jobId: string,
+  platform = 'linkedin'
+): Promise<void> {
   await db
     .from('applications')
-    .update({ platform: 'linkedin', notes: 'Prepared by Recuter — awaiting your review & submit' })
+    .update({ platform, notes: 'Prepared by Recuter — awaiting your review & submit' })
     .eq('id', applicationId)
   await db.from('jobs').update({ status: 'applying' }).eq('id', jobId)
 }

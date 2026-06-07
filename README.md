@@ -94,8 +94,26 @@ use the status chips at the top to filter, or "Everything" to see them all.
 3. **Verify RLS** on the base tables (see the check at the bottom of `supabase-schema.sql`) so the anon key can't read them directly — only through the view.
 4. **Fill in `config.js`** with the URL + anon key (the anon key is public-safe; service-role keys never go here).
 5. **Push to GitHub** (see Git workflow below).
-6. **Deploy on Vercel.** Import the GitHub repo, framework = "Other", no build command needed (static).
-7. **Custom domain.** In Vercel → Project → Settings → Domains, add `recuter.com`. Add the DNS records it gives you at GoDaddy (A record + CNAME for `www`).
+6. **Deploy.** Two options:
+   - **GitHub Pages (current/interim host)** — see the section below. No extra account needed.
+   - **Vercel** — import the repo, framework = "Other", no build command (static). Gives clean URLs + the security headers in `vercel.json`.
+7. **Custom domain.** Point `recuter.com` at whichever host (DNS records from the host → add at GoDaddy).
+
+### Deploy via GitHub Pages
+
+The site is plain static files at the repo root, so Pages can serve it directly
+(`.nojekyll` is committed so GitHub serves files as-is).
+
+1. Merge the work to **`main`** (or pick the branch you want to publish).
+2. GitHub repo → **Settings → Pages**.
+3. **Source:** "Deploy from a branch" → **Branch:** `main`, **Folder:** `/ (root)` → **Save**.
+4. Wait ~1 min, then open **`https://mattgiss.github.io/recuter/`**. The board loads
+   live from Supabase (relative paths work fine under the `/recuter/` subpath).
+5. **Custom domain (later):** add a `CNAME` file containing `recuter.com` (or set it
+   under Settings → Pages → Custom domain), then point GoDaddy DNS at GitHub Pages.
+
+> Want a preview *before* merging? In step 3 choose the feature branch instead of
+> `main`; switch it back to `main` once merged.
 
 ### What appears on the board
 
@@ -107,7 +125,7 @@ add a `where` clause to the `board` view.
 
 ## Git workflow
 
-`main` is what Vercel deploys. Until traffic shows up, working directly on `main` is fine. Once it's live and getting signups, switch to feat-branch + PR (same gate we use on the gissentanna site).
+`main` is the published branch (whichever host points at it). Until traffic shows up, working directly on `main` is fine. Once it's live, switch to feat-branch + PR (same gate we use on the gissentanna site).
 
 ## Local preview
 

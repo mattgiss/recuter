@@ -1,7 +1,17 @@
--- Run this in Supabase SQL editor (Database → SQL Editor → New query)
+-- ============================================================
+-- recuter — website-side Supabase SQL
+--
+-- The agent backend's tables and the public board now live in proper
+-- migrations:
+--   supabase/migrations/001_initial_schema.sql  → backend tables
+--   supabase/migrations/002_board_and_rls.sql   → RLS lockdown + `board` view
+--
+-- This file holds only the legacy `waitlist` table used by landing.html
+-- (the original coming-soon page, kept for reference).
+-- ============================================================
+
 -- Creates the waitlist table + an RLS policy that lets the anonymous
 -- public key INSERT new emails but NOT read the list.
-
 create table if not exists public.waitlist (
   id          uuid primary key default gen_random_uuid(),
   email       text not null unique,

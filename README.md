@@ -2,10 +2,9 @@
 
 An AI agent that wins the race to "Apply" on perfect-fit job postings — built like a sneaker bot, aimed at the GIS job market.
 
-**Live:** [recuter.com](https://recuter.com) (coming soon landing page)
-
+**Live:** [recuter.com](https://recuter.com) (the job board)
 **Notifications:** GitHub activity posts to Discord automatically.
-**Stack (landing):** static HTML + Supabase (waitlist) + Vercel (host) + GitHub (source)
+**Stack:** static HTML board + Supabase backend + GitHub Pages / Vercel (host) + GitHub (source)
 
 ---
 
@@ -36,33 +35,103 @@ Two halves:
 
 ## This repo (right now)
 
-Just the **coming-soon landing page** + waitlist email capture. The agent itself lives in a separate workstream — see `voice-memo-2026-06-03.md`.
+A **public job board** — a rolling shortlist of the best-fit GIS jobs, each tagged
+with where it stands in the pipeline. The board reads live from a Supabase **`board`
+view** using the public anon key (read-only).
+
+The actual data lives in the **agent backend** (the `jobs`, `employers`,
+`applications`, `scraped_jobs`, … tables — defined in `supabase/migrations/` and
+populated by the `server/` app). The website never touches those tables directly;
+it only reads the curated `board` view, which exposes a safe subset of columns and
+joins each job to its employer (company name) and most recent application (pipeline
+status). See `server/` for the scrapers/agents that *fill* those tables.
 
 ```
 recuter/
-  index.html              ← the landing page
+  index.html              ← the job board (reads the `board` view)
+  landing.html            ← the original coming-soon landing + waitlist (kept for reference)
   config.js               ← Supabase URL + anon key (filled in locally + on Vercel)
   config.example.js       ← template showing the shape of config.js
-  supabase-schema.sql     ← run this in the Supabase SQL editor
+  supabase/migrations/    ← backend tables (001) + RLS lockdown & `board` view (002)
+  supabase-schema.sql     ← legacy waitlist table (used by landing.html)
   vercel.json             ← security headers, clean URLs
   voice-memo-2026-06-03.md
   README.md
 ```
 
+### The board's statuses
+
+The display status comes from the backend: a job's most recent `applications.status`
+if it's been applied to, otherwise the `jobs.status`. The page gives these known
+values a label, color, and ordering, and **falls back gracefully** for any other
+string (so new backend statuses still render):
+
+| status         | how it shows up                       |
+|----------------|---------------------------------------|
+| `new`          | green, sorts to the top, "Apply"      |
+| `recommended`  | cyan, near the top, "Apply"           |
+| `offer`        | gold                                  |
+| `interviewing` | purple                                |
+| `applied`      | blue                                  |
+| `closed`       | dimmed                                |
+| `rejected`     | dimmed                                |
+| `passed`       | dimmed                                |
+
+Today every job in the backend is `status = 'new'` (and `applications` is empty),
+so the board is effectively your "to apply" pile. As the agent starts creating
+`applications` rows, those statuses (`applied`, `interviewing`, …) flow through
+automatically via the view's `coalesce(application.status, job.status)`.
+
+> The mapping is in `STATUS` at the top of the `index.html` module script — adjust
+> labels/colors there once the backend's real status vocabulary is confirmed.
+
+By default the board shows **open roles** (everything except closed/rejected/passed);
+use the status chips at the top to filter, or "Everything" to see them all.
+
 ## Setup — one-time
 
-1. **Create the Supabase project** at [supabase.com](https://supabase.com/dashboard) (free tier is fine). Name it `recuter`.
-2. **Run the schema.** In Supabase → SQL Editor → New query, paste `supabase-schema.sql` and run it. Creates `waitlist` + an RLS policy that only allows `INSERT` (the anon key can't read the list).
-3. **Get the keys.** Supabase → Settings → API. Copy the **Project URL** and the **anon public** key.
-4. **Fill in `config.js` locally** (do not commit secrets — the anon key is public-safe, but service-role keys never go in here).
+1. **Supabase project** already exists (it holds the agent backend). Grab its keys from Supabase → **Settings → API**: the **Project URL** and the **anon public** key.
+2. **Apply migration `002_board_and_rls.sql`** (via your migration flow, or paste it into Supabase → SQL Editor → Run). It enables RLS on the backend tables and creates the public `board` view with anon read access.
+3. **Verify RLS** is on for every backend table:
+   `select tablename, rowsecurity from pg_tables where schemaname='public';`
+   (all backend tables should read `true` — only the `board` view is anon-readable).
+4. **Fill in `config.js`** with the URL + anon key (the anon key is public-safe; service-role keys never go here).
 5. **Push to GitHub** (see Git workflow below).
-6. **Deploy on Vercel.** Import the GitHub repo, framework = "Other", no build command needed (static).
-7. **Custom domain.** In Vercel → Project → Settings → Domains, add `recuter.com`. Vercel will give you DNS records to add at GoDaddy (A record + CNAME for `www`). Propagation is usually minutes.
+6. **Deploy.** Two options:
+   - **GitHub Pages (current/interim host)** — see the section below. No extra account needed.
+   - **Vercel** — import the repo, framework = "Other", no build command (static). Gives clean URLs + the security headers in `vercel.json`.
+7. **Custom domain.** Point `recuter.com` at whichever host (DNS records from the host → add at GoDaddy).
+
+### Deploy via GitHub Pages
+
+The site is plain static files at the repo root, so Pages can serve it directly
+(`.nojekyll` is committed so GitHub serves files as-is).
+
+1. Merge the work to **`main`** (or pick the branch you want to publish).
+2. GitHub repo → **Settings → Pages**.
+3. **Source:** "Deploy from a branch" → **Branch:** `main`, **Folder:** `/ (root)` → **Save**.
+4. Wait ~1 min, then open **`https://mattgiss.github.io/recuter/`**. The board loads
+   live from Supabase (relative paths work fine under the `/recuter/` subpath).
+5. **Custom domain (later):** add a `CNAME` file containing `recuter.com` (or set it
+   under Settings → Pages → Custom domain), then point GoDaddy DNS at GitHub Pages.
+
+> Want a preview *before* merging? In step 3 choose the feature branch instead of
+> `main`; switch it back to `main` once merged.
+
+### What appears on the board
+
+Whatever the agent backend writes to `jobs` (joined to `employers`/`applications`)
+flows straight onto the board through the view. You can also curate by hand in
+Supabase → **Table Editor → `jobs`** (set `status`, `score`, `url`, …). Filtering
+rules for which jobs are "still possible" enough to show are TBD — when decided,
+add a `where` clause to the `board` view.
 
 ## Git workflow
 
-`main` is what Vercel deploys. Until traffic shows up, working directly on `main` is fine. Once it's live and getting signups, switch to feat-branch + PR (same gate we use on the gissentanna site).
+`main` is the published branch (whichever host points at it). Until traffic shows up, working directly on `main` is fine. Once it's live, switch to feat-branch + PR (same gate we use on the gissentanna site).
 
 ## Local preview
 
-Open `index.html` in a browser — it's fully static. Until `config.js` has real values, the form will show an error on submit, which is expected.
+Open `index.html` in a browser — it's fully static. Until `config.js` has real values,
+the board shows a friendly "isn't connected yet" message instead of listings. Once the
+schema is run and the keys are in, the board fetches and renders the `jobs` table live.

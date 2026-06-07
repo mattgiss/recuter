@@ -133,13 +133,42 @@ Each open listing has an **Apply with recuter** button. Tapping it drops a row i
 server picks these up:
 
 ```bash
-npm run requests   # in server/ — prepares + queues each requested job
-npm run apply      # fills it in on LinkedIn for your review (review-first)
+npm run requests        # in server/ — prepares + queues each requested job
+npm run apply           # fills it in on LinkedIn for your review (review-first)
+npm run apply:usajobs   # same, for USAJOBS roles (see server/USAJOBS-APPLYING.md)
 ```
 
 `npm run requests` generates the tailored résumé + cover letter for the job (from
 your master profile) if it doesn't have them yet, then marks the job `queued` so
 the apply run grabs it.
+
+### Mark a job applied
+
+Once you've finished an application by hand, hit **Mark applied** on its card.
+That drops a row in `status_requests` (anon-insert only — same safe pattern as
+the Apply button) and the card flips to **Applied** right away. The server
+reconciles the real status with:
+
+```bash
+npm run status     # in server/ — applies pending board status changes
+```
+
+### The studio (your portfolio library)
+
+A **"portfolio"** is the tailored résumé + cover letter for one job. The private
+**studio** page (`/studio`) is your library of them — every version, and which
+one you applied with for each role. Because those documents are personal, the
+public board can't read them; the studio reads through a password-gated Supabase
+Edge Function instead (service-role stays server-side):
+
+```bash
+supabase functions deploy studio --no-verify-jwt
+supabase secrets set STUDIO_PASSWORD=your-password
+```
+
+Then open `/studio`, enter the password, and browse / copy / download each
+résumé and cover letter. Apply migration `005_status_requests.sql` first (it
+adds the `status_requests` table and updates the `board` view).
 
 ## Git workflow
 

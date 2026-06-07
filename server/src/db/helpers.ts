@@ -357,6 +357,90 @@ export async function markApplyRequestDone(
     .eq('id', id)
 }
 
+// ── Status-change requests (the board's "Mark applied" switch) ─────────────────
+
+export interface StatusRequest {
+  id: string
+  jobId: string
+  toStatus: string
+}
+
+/** Pending status-change requests submitted from the board. */
+export async function getPendingStatusRequests(): Promise<StatusRequest[]> {
+  const { data, error } = await db
+    .from('status_requests')
+    .select('id, job_id, to_status')
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true })
+
+  if (error) throw new Error(`getPendingStatusRequests failed: ${error.message}`)
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    jobId: r.job_id as string,
+    toStatus: r.to_status as string,
+  }))
+}
+
+/** Mark a status request handled. */
+export async function markStatusRequestDone(
+  id: string,
+  status: 'done' | 'error',
+  note?: string
+): Promise<void> {
+  await db
+    .from('status_requests')
+    .update({ status, note: note ?? null, processed_at: new Date().toISOString() })
+    .eq('id', id)
+}
+
+// Board display status → applications.status (subset that's valid on the
+// applications check constraint). Board-only states (e.g. 'closed') don't map.
+const APP_STATUS_FOR: Record<string, string | undefined> = {
+  applied: 'submitted',
+  interviewing: 'interview',
+  offer: 'offer',
+  rejected: 'rejected',
+  passed: 'withdrawn',
+  closed: undefined,
+}
+
+/**
+ * Apply a board status change to the real pipeline. Sets the job's status and,
+ * when the board status maps to a valid application status, the latest (or a
+ * freshly created) application's status — stamping applied_at when applying.
+ */
+export async function applyBoardStatus(jobId: string, toStatus: string): Promise<void> {
+  // Job status mirrors the board status where the jobs constraint allows it.
+  const JOB_STATUSES = ['applied', 'failed', 'new', 'scored', 'queued', 'applying', 'skipped']
+  if (JOB_STATUSES.includes(toStatus)) {
+    await db.from('jobs').update({ status: toStatus, updated_at: new Date().toISOString() }).eq('id', jobId)
+  }
+
+  const appStatus = APP_STATUS_FOR[toStatus]
+  if (!appStatus) return
+
+  // Find the latest application for this job, or create one to carry the status.
+  const { data: existing } = await db
+    .from('applications')
+    .select('id, employer_id')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let applicationId = existing?.id as string | undefined
+  if (!applicationId) {
+    const { data: job } = await db.from('jobs').select('employer_id').eq('id', jobId).maybeSingle()
+    applicationId = await createApplication(jobId, (job?.employer_id as string) ?? null)
+  }
+
+  const patch: Record<string, unknown> = { status: appStatus, updated_at: new Date().toISOString() }
+  if (toStatus === 'applied') patch.applied_at = new Date().toISOString()
+
+  const { error } = await db.from('applications').update(patch).eq('id', applicationId)
+  if (error) throw new Error(`applyBoardStatus failed: ${error.message}`)
+}
+
 /** Fetch a single job by id, shaped for document generation. */
 export async function getJobById(jobId: string): Promise<RawJob | null> {
   const { data, error } = await db

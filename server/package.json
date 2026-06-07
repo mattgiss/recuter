@@ -6,6 +6,7 @@
     "scrape": "ts-node src/scrapers/run.ts",
     "score": "ts-node src/agents/run.ts",
     "requests": "ts-node src/requests/run.ts",
+    "status": "ts-node src/requests/status.ts",
     "apply": "ts-node src/apply/run.ts",
     "apply:usajobs": "ts-node src/apply/run-usajobs.ts",
     "inbox": "ts-node src/inbox/run.ts",

@@ -150,6 +150,10 @@
       background: var(--bg-3); color: var(--muted); border-color: var(--border);
       box-shadow: none; cursor: default;
     }
+    .btn.ghost {
+      background: transparent; color: var(--muted); border-color: var(--border);
+    }
+    .btn.ghost:hover { color: var(--fg); border-color: var(--faint); }
     .actions { display: flex; align-items: center; gap: 0.6rem; }
     .post-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; white-space: nowrap; }
     .post-link:hover { color: var(--fg); text-decoration: underline; }
@@ -293,6 +297,17 @@
       try { localStorage.setItem(REQ_KEY, JSON.stringify([...requested])); } catch {}
     };
 
+    // Jobs you've flipped to "Applied" here (remembered locally with the date,
+    // so the card sticks as Applied until the server reconciles the real status
+    // — same reason as above: the board can't read the private tables back).
+    const APPLIED_KEY = "recuter_applied";
+    const appliedLocal = new Map((() => {
+      try { return Object.entries(JSON.parse(localStorage.getItem(APPLIED_KEY) || "{}")); } catch { return []; }
+    })());
+    const saveApplied = () => {
+      try { localStorage.setItem(APPLIED_KEY, JSON.stringify(Object.fromEntries(appliedLocal))); } catch {}
+    };
+
     function relTime(ts) {
       if (!ts) return "";
       const d = new Date(ts), now = new Date();
@@ -392,7 +407,12 @@
         : requested.has(job.id)
           ? `<button class="btn requested" disabled>Requested ✓</button>`
           : `<button class="btn ${["new","recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" data-apply="${esc(job.id)}">Apply with recuter</button>`;
-      const cta = `<div class="actions">${viewLink}${applyBtn}</div>`;
+      // "Mark applied" lets you flip a card to Applied once you've finished the
+      // application by hand. Hidden once it's already Applied or in a dead state.
+      const markBtn = (m.dead || job.status === "applied")
+        ? ""
+        : `<button class="btn ghost" data-mark-applied="${esc(job.id)}">Mark applied</button>`;
+      const cta = `<div class="actions">${viewLink}${markBtn}${applyBtn}</div>`;
 
       return `<article class="card ${m.dead ? "is-dead" : ""}"
                 style="--accent-bar:${m.color}; --pill-fg:${m.color}; --pill-border:${m.color}33; --pill-bg:${m.color}14;">
@@ -471,6 +491,18 @@
           "New best-fit jobs land here as they're surfaced. Check back soon.");
       }
 
+      // Re-apply any local "Mark applied" flips so cards stay Applied until the
+      // server reconciles. Once the board itself reports applied, drop the local
+      // override so it doesn't linger forever.
+      for (const j of data) {
+        if (j.status === "applied") { appliedLocal.delete(j.id); continue; }
+        if (appliedLocal.has(j.id)) {
+          j.status = "applied";
+          j.applied_at = j.applied_at || appliedLocal.get(j.id);
+        }
+      }
+      saveApplied();
+
       const jobs = sortJobs(data);
       const latest = data
         .map((j) => new Date(j.updated_at || j.created_at || 0))
@@ -518,6 +550,38 @@
           ],
           autoClose: true,
         });
+      });
+
+      // "Mark applied" → drop a status_requests row (anon insert); the server
+      // (`npm run status`) flips the real status. Optimistically show Applied now.
+      boardEl.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-mark-applied]");
+        if (!btn || btn.disabled) return;
+        const jobId = btn.dataset.markApplied;
+        const job = jobs.find((j) => j.id === jobId);
+
+        btn.disabled = true;
+        btn.textContent = "Saving…";
+        const { error: insErr } = await supabase
+          .from("status_requests")
+          .insert({ job_id: jobId, to_status: "applied" });
+
+        if (insErr) {
+          console.error(insErr);
+          btn.textContent = "Try again";
+          btn.disabled = false;
+          showToast("err", {
+            title: "That didn't go through",
+            body: "Couldn't save that just now. Check your connection and tap <strong>Try again</strong>.",
+          });
+          return;
+        }
+
+        const now = new Date().toISOString();
+        appliedLocal.set(jobId, now);
+        saveApplied();
+        if (job) { job.status = "applied"; job.applied_at = now; }
+        draw();
       });
 
       let active = "live";

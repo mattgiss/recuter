@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>recuter — studio</title>
+  <style>
+    :root {
+      --bg: #D6D6D6; --bg-2: #ffffff; --bg-3: #ECECEC;
+      --fg: #0D121A; --muted: #363845; --faint: #6E7480;
+      --accent: #F23861; --border: #C2C2C2; --border-2: #ABABB2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--fg); background: var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+    }
+    header {
+      padding: 1.4rem 1.2rem 1rem; max-width: 980px; margin: 0 auto;
+      display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap;
+    }
+    h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.01em; }
+    .sub { color: var(--faint); font-size: .85rem; }
+    main { max-width: 980px; margin: 0 auto; padding: 0 1.2rem 4rem; }
+
+    /* gate */
+    .gate { max-width: 380px; margin: 4rem auto; background: var(--bg-2);
+      border: 1px solid var(--border); border-radius: 14px; padding: 1.6rem; }
+    .gate h2 { margin: 0 0 .3rem; font-size: 1.05rem; }
+    .gate p { margin: 0 0 1rem; color: var(--faint); font-size: .85rem; }
+    input[type=password] {
+      width: 100%; padding: .65rem .8rem; border-radius: 9px;
+      border: 1px solid var(--border-2); background: #fff; font-size: .95rem; margin-bottom: .8rem;
+    }
+    .btn {
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      padding: .55rem .95rem; border-radius: 9px; border: 1px solid var(--border-2);
+      color: var(--fg); background: var(--bg-3);
+    }
+    .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+    .btn.ghost { background: transparent; color: var(--muted); }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .err { color: var(--accent); font-size: .82rem; margin-top: .4rem; min-height: 1rem; }
+
+    /* portfolio cards */
+    .card { background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+    .card-head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .role { margin: 0; font-size: 1rem; }
+    .role a { color: var(--fg); text-decoration: none; }
+    .role a:hover { text-decoration: underline; }
+    .org { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
+    .pill { font-size: .72rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px;
+      border: 1px solid var(--border-2); color: var(--muted); white-space: nowrap; }
+    .meta { display: flex; flex-wrap: wrap; gap: .4rem; margin: .6rem 0 .2rem; }
+    .tag { font-size: .72rem; color: var(--muted); background: var(--bg-3);
+      padding: .15rem .5rem; border-radius: 6px; }
+    .docs { margin-top: .9rem; display: grid; gap: .7rem; }
+    .doc { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .doc summary { cursor: pointer; padding: .55rem .8rem; font-size: .85rem; font-weight: 600;
+      display: flex; align-items: center; justify-content: space-between; gap: .6rem; list-style: none; }
+    .doc summary::-webkit-details-marker { display: none; }
+    .doc .label { display: flex; align-items: center; gap: .5rem; }
+    .doc .used { font-size: .68rem; font-weight: 700; color: #fff; background: var(--accent);
+      padding: .1rem .45rem; border-radius: 999px; }
+    .doc-body { border-top: 1px solid var(--border); }
+    .doc-actions { display: flex; gap: .5rem; padding: .5rem .8rem; background: var(--bg-3); }
+    pre { margin: 0; padding: .9rem .9rem; white-space: pre-wrap; word-wrap: break-word;
+      font: .8rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 360px; overflow: auto; }
+    .ver-list { padding: .4rem .8rem .7rem; display: grid; gap: .35rem; }
+    .ver { font-size: .78rem; color: var(--muted); display: flex; gap: .6rem; align-items: center; }
+    .ver button { font-size: .72rem; padding: .15rem .5rem; }
+    .empty { color: var(--faint); text-align: center; padding: 3rem 1rem; }
+  </style>
+</head>
+<body>
+  <script src="./config.js"></script>
+
+  <div id="gate" class="gate">
+    <h2>recuter studio</h2>
+    <p>Your private portfolio library — every résumé &amp; cover letter, and what you applied with.</p>
+    <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
+    <button id="enter" class="btn primary">Open</button>
+    <div id="gate-err" class="err"></div>
+  </div>
+
+  <header id="hdr" hidden>
+    <h1>recuter studio</h1>
+    <span class="sub" id="count"></span>
+    <span style="flex:1"></span>
+    <button id="lock" class="btn ghost">Lock</button>
+  </header>
+  <main id="main" hidden></main>
+
+  <script>
+    const cfg = window.RECUTER_CONFIG || {};
+    const FN_URL = (cfg.SUPABASE_URL || "").replace(/\/$/, "") + "/functions/v1/studio";
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+    const gate = document.getElementById("gate");
+    const gateErr = document.getElementById("gate-err");
+    const hdr = document.getElementById("hdr");
+    const main = document.getElementById("main");
+    const pwInput = document.getElementById("pw");
+
+    function relDate(ts) {
+      if (!ts) return "";
+      return new Date(ts).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    }
+    function download(name, text) {
+      const blob = new Blob([text], { type: "text/markdown" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    async function copy(text, btn) {
+      try { await navigator.clipboard.writeText(text); const t = btn.textContent;
+        btn.textContent = "Copied ✓"; setTimeout(() => btn.textContent = t, 1200); } catch {}
+    }
+
+    // Slugify "Title @ Company" for nice filenames.
+    const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+
+    function docBlock(kind, doc, isUsed, baseName) {
+      if (!doc) return "";
+      const file = `${baseName}-${kind}${doc.version ? "-v" + doc.version : ""}.md`;
+      return `<details class="doc">
+        <summary>
+          <span class="label">${kind === "resume" ? "Résumé" : "Cover letter"}${doc.version ? ` · v${doc.version}` : ""}
+            ${isUsed ? `<span class="used">applied with</span>` : ""}</span>
+          <span class="tag">${esc(relDate(doc.createdAt))}</span>
+        </summary>
+        <div class="doc-body">
+          <div class="doc-actions">
+            <button class="btn ghost" data-copy>Copy</button>
+            <button class="btn ghost" data-dl="${esc(file)}">Download .md</button>
+          </div>
+          <pre>${esc(doc.content)}</pre>
+        </div>
+      </details>`;
+    }
+
+    function versionsBlock(kind, versions, usedId, baseName) {
+      const extra = (versions || []).filter(v => v.id !== usedId);
+      if (!extra.length) return "";
+      return `<details class="doc">
+        <summary><span class="label">Older ${kind === "resume" ? "résumé" : "cover letter"} versions (${extra.length})</span></summary>
+        <div class="doc-body ver-list">
+          ${extra.map(v => `<div class="ver">
+            <span>${kind === "resume" ? "Résumé" : "Cover letter"}${v.version ? ` v${v.version}` : ""} · ${esc(relDate(v.createdAt))}</span>
+            <button class="btn ghost" data-copy-id="${esc(v.id)}">Copy</button>
+            <button class="btn ghost" data-dl-id="${esc(v.id)}" data-name="${esc(baseName)}-${kind}${v.version ? "-v" + v.version : ""}.md">Download</button>
+          </div>`).join("")}
+        </div>
+      </details>`;
+    }
+
+    let LIB = [];   // keep portfolios in memory so version buttons can find content
+
+    function render(portfolios) {
+      LIB = portfolios;
+      document.getElementById("count").textContent =
+        `${portfolios.length} portfolio${portfolios.length === 1 ? "" : "s"}`;
+      if (!portfolios.length) {
+        main.innerHTML = `<div class="empty">No portfolios yet. Tap “Apply with recuter” on the board to create your first tailored résumé + cover letter.</div>`;
+        return;
+      }
+      main.innerHTML = portfolios.map((p, i) => {
+        const base = slug(`${p.job.title}-${p.job.company}`) || ("portfolio-" + i);
+        const tags = [];
+        if (p.appliedAt) tags.push(`<span class="tag">applied ${esc(relDate(p.appliedAt))}</span>`);
+        if (p.platform) tags.push(`<span class="tag">${esc(p.platform)}</span>`);
+        if (p.job.source) tags.push(`<span class="tag">${esc(p.job.source)}</span>`);
+        if (typeof p.job.score === "number") tags.push(`<span class="tag">score ${p.job.score}</span>`);
+        const title = p.job.url
+          ? `<a href="${esc(p.job.url)}" target="_blank" rel="noopener">${esc(p.job.title)}</a>`
+          : esc(p.job.title);
+        return `<article class="card" data-idx="${i}">
+          <div class="card-head">
+            <div>
+              <h3 class="role">${title}</h3>
+              <p class="org">${esc(p.job.company)}${p.job.location ? " · " + esc(p.job.location) : ""}</p>
+            </div>
+            <span class="pill">${esc(p.status)}</span>
+          </div>
+          ${tags.length ? `<div class="meta">${tags.join("")}</div>` : ""}
+          <div class="docs">
+            ${docBlock("resume", p.resume, true, base)}
+            ${docBlock("cover", p.coverLetter, true, base)}
+            ${versionsBlock("resume", p.resumeVersions, p.resume && p.resume.id, base)}
+            ${versionsBlock("cover", p.coverLetterVersions, p.coverLetter && p.coverLetter.id, base)}
+          </div>
+        </article>`;
+      }).join("");
+    }
+
+    // Event delegation for copy / download (both the shown docs and version lists).
+    main.addEventListener("click", (e) => {
+      const card = e.target.closest(".card");
+      const p = card ? LIB[+card.dataset.idx] : null;
+
+      const copyBtn = e.target.closest("[data-copy]");
+      if (copyBtn) { copy(copyBtn.closest(".doc-body").querySelector("pre").textContent, copyBtn); return; }
+      const dlBtn = e.target.closest("[data-dl]");
+      if (dlBtn) { download(dlBtn.dataset.dl, dlBtn.closest(".doc-body").querySelector("pre").textContent); return; }
+
+      // Version-list buttons resolve content by id from memory.
+      const findById = (id) => {
+        for (const v of (p.resumeVersions || [])) if (v.id === id) return v;
+        for (const v of (p.coverLetterVersions || [])) if (v.id === id) return v;
+        return null;
+      };
+      const cId = e.target.closest("[data-copy-id]");
+      if (cId && p) { const v = findById(cId.dataset.copyId); if (v) copy(v.content, cId); return; }
+      const dId = e.target.closest("[data-dl-id]");
+      if (dId && p) { const v = findById(dId.dataset.dlId); if (v) download(dId.dataset.name, v.content); return; }
+    });
+
+    async function unlock(password) {
+      if (!cfg.SUPABASE_URL) { gateErr.textContent = "Set SUPABASE_URL in config.js first."; return; }
+      const enter = document.getElementById("enter");
+      enter.disabled = true; enter.textContent = "Opening…"; gateErr.textContent = "";
+      try {
+        const res = await fetch(FN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+        if (res.status === 401) { gateErr.textContent = "Wrong password."; return; }
+        if (!res.ok) { gateErr.textContent = "Couldn't load (" + res.status + ")."; return; }
+        const { portfolios } = await res.json();
+        sessionStorage.setItem("recuter_studio_pw", password);
+        gate.hidden = true; hdr.hidden = false; main.hidden = false;
+        render(portfolios || []);
+      } catch (err) {
+        gateErr.textContent = "Network error — try again.";
+      } finally {
+        enter.disabled = false; enter.textContent = "Open";
+      }
+    }
+
+    document.getElementById("enter").addEventListener("click", () => unlock(pwInput.value));
+    pwInput.addEventListener("keydown", (e) => { if (e.key === "Enter") unlock(pwInput.value); });
+    document.getElementById("lock").addEventListener("click", () => {
+      sessionStorage.removeItem("recuter_studio_pw");
+      location.reload();
+    });
+
+    // Re-open automatically within the same tab session.
+    const saved = sessionStorage.getItem("recuter_studio_pw");
+    if (saved) unlock(saved);
+  </script>
+</body>
+</html>

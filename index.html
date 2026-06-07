@@ -8,27 +8,28 @@
   <meta property="og:title" content="recuter — the board" />
   <meta property="og:description" content="The best-fit jobs, at a glance — and where each one stands in the pipeline." />
   <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#0b0d10" />
+  <meta name="theme-color" content="#D6D6D6" />
   <style>
+    /* Matt Gray brand — Silver background, Dark Matter text, brand accents */
     :root {
-      --bg: #0b0d10;
-      --bg-2: #11141a;
-      --bg-3: #161a21;
-      --fg: #e8ecf1;
-      --muted: #8a93a0;
-      --faint: #5b6470;
-      --accent: #5cf2a3;
-      --border: #1f242c;
-      --border-2: #2a313b;
-      /* status colors */
-      --s-new:         #5cf2a3;
-      --s-recommended: #5ad9f2;
-      --s-offer:       #ffd166;
-      --s-interviewing:#c08cff;
-      --s-applied:     #7aa2ff;
-      --s-closed:      #8a93a0;
-      --s-rejected:    #ff7a7a;
-      --s-passed:      #8a93a0;
+      --bg: #D6D6D6;        /* Silver */
+      --bg-2: #ffffff;      /* card surface */
+      --bg-3: #ECECEC;      /* chips / tags */
+      --fg: #0D121A;        /* Dark Matter */
+      --muted: #363845;     /* Space Gray */
+      --faint: #6E7480;
+      --accent: #F23861;    /* Nebula */
+      --border: #C2C2C2;
+      --border-2: #ABABB2;
+      /* status colors — brand accents, tuned for contrast on white cards */
+      --s-new:         #F23861;  /* Nebula  — top action */
+      --s-recommended: #1F8AA0;  /* Cyan    (darkened) */
+      --s-offer:       #120ACC;  /* BSoD */
+      --s-interviewing:#7C5BB0;  /* Violet  (darkened) */
+      --s-applied:     #363845;  /* Space Gray — in flight */
+      --s-closed:      #8A8F99;
+      --s-rejected:    #B23A4B;
+      --s-passed:      #8A8F99;
     }
     * { box-sizing: border-box; }
     html, body { min-height: 100%; }
@@ -36,8 +37,8 @@
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
       background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(92, 242, 163, 0.06), transparent 60%),
-        radial-gradient(900px 500px at 110% 110%, rgba(92, 242, 163, 0.04), transparent 60%),
+        radial-gradient(1200px 600px at 10% -10%, rgba(242, 56, 97, 0.06), transparent 60%),
+        radial-gradient(900px 500px at 110% 110%, rgba(71, 178, 196, 0.07), transparent 60%),
         var(--bg);
       color: var(--fg);
       -webkit-font-smoothing: antialiased;
@@ -74,7 +75,7 @@
     }
     .chip .count {
       font-variant-numeric: tabular-nums; font-size: 0.72rem;
-      color: var(--faint); background: rgba(255,255,255,0.04);
+      color: var(--faint); background: rgba(13,18,26,0.06);
       padding: 0.05rem 0.4rem; border-radius: 999px;
     }
     .chip .swatch { width: 7px; height: 7px; border-radius: 50%; }
@@ -84,15 +85,17 @@
     .board { display: flex; flex-direction: column; gap: 0.75rem; }
     .card {
       border: 1px solid var(--border); border-radius: 12px;
-      background: linear-gradient(180deg, var(--bg-2), var(--bg-2));
+      background: var(--bg-2);
       padding: 1rem 1.1rem; position: relative; overflow: hidden;
-      transition: border-color 140ms ease, transform 140ms ease;
+      box-shadow: 0 1px 2px rgba(13,18,26,0.06), 0 4px 12px -8px rgba(13,18,26,0.10);
+      transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
     }
     .card::before {
       content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
       background: var(--accent-bar, var(--border-2));
     }
-    .card:hover { border-color: var(--border-2); transform: translateY(-1px); }
+    .card:hover { border-color: var(--border-2); transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(13,18,26,0.08), 0 10px 20px -10px rgba(13,18,26,0.16); }
     .card.is-dead { opacity: 0.55; }
 
     .card-head {
@@ -123,8 +126,8 @@
       padding: 0.22rem 0.55rem; border: 1px solid var(--border);
       border-radius: 6px; background: var(--bg-3);
     }
-    .tag.score { color: var(--accent); border-color: rgba(92,242,163,0.25); }
-    .tag.urgent { color: #ffb27a; border-color: rgba(255,178,122,0.3); }
+    .tag.score { color: var(--accent); border-color: rgba(242,56,97,0.3); }
+    .tag.urgent { color: #C2410C; border-color: rgba(194,65,12,0.3); }
 
     .card-foot {
       display: flex; align-items: center; justify-content: space-between;
@@ -139,8 +142,8 @@
     }
     .btn:hover { transform: translateY(-1px); border-color: var(--faint); }
     .btn.primary {
-      background: var(--accent); color: #06140c; border-color: transparent;
-      box-shadow: 0 8px 24px -12px rgba(92, 242, 163, 0.5);
+      background: var(--accent); color: #ffffff; border-color: transparent;
+      box-shadow: 0 8px 24px -12px rgba(242, 56, 97, 0.55);
     }
 
     /* states */
@@ -156,7 +159,7 @@
       border: 1px solid var(--border); position: relative; overflow: hidden; }
     .skeleton::after {
       content: ""; position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
       transform: translateX(-100%); animation: shimmer 1.3s infinite;
     }
     @keyframes shimmer { 100% { transform: translateX(100%); } }

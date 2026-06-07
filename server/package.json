@@ -5,6 +5,7 @@
   "scripts": {
     "scrape": "ts-node src/scrapers/run.ts",
     "score": "ts-node src/agents/run.ts",
+    "requests": "ts-node src/requests/run.ts",
     "apply": "ts-node src/apply/run.ts",
     "inbox": "ts-node src/inbox/run.ts",
     "dbr": "ts-node src/notifications/dbr.ts",

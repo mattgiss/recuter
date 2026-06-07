@@ -126,6 +126,21 @@ Supabase → **Table Editor → `jobs`** (set `status`, `score`, `url`, …). Fi
 rules for which jobs are "still possible" enough to show are TBD — when decided,
 add a `where` clause to the `board` view.
 
+### Apply from the board
+
+Each open listing has an **Apply with recuter** button. Tapping it drops a row in
+`apply_requests` (anon-insert only — same safe pattern as the waitlist). The
+server picks these up:
+
+```bash
+npm run requests   # in server/ — prepares + queues each requested job
+npm run apply      # fills it in on LinkedIn for your review (review-first)
+```
+
+`npm run requests` generates the tailored résumé + cover letter for the job (from
+your master profile) if it doesn't have them yet, then marks the job `queued` so
+the apply run grabs it.
+
 ## Git workflow
 
 `main` is the published branch (whichever host points at it). Until traffic shows up, working directly on `main` is fine. Once it's live, switch to feat-branch + PR (same gate we use on the gissentanna site).

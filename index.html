@@ -145,6 +145,14 @@
       background: var(--accent); color: #ffffff; border-color: transparent;
       box-shadow: 0 8px 24px -12px rgba(242, 56, 97, 0.55);
     }
+    .btn:disabled { cursor: default; }
+    .btn.requested {
+      background: var(--bg-3); color: var(--muted); border-color: var(--border);
+      box-shadow: none; cursor: default;
+    }
+    .actions { display: flex; align-items: center; gap: 0.6rem; }
+    .post-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; white-space: nowrap; }
+    .post-link:hover { color: var(--fg); text-decoration: underline; }
 
     /* states */
     .state {
@@ -224,6 +232,16 @@
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
       ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 
+    // Jobs you've already tapped "Apply" on (remembered locally — the board
+    // can't read the private apply_requests table back).
+    const REQ_KEY = "recuter_requested";
+    const requested = new Set((() => {
+      try { return JSON.parse(localStorage.getItem(REQ_KEY) || "[]"); } catch { return []; }
+    })());
+    const saveRequested = () => {
+      try { localStorage.setItem(REQ_KEY, JSON.stringify([...requested])); } catch {}
+    };
+
     function relTime(ts) {
       if (!ts) return "";
       const d = new Date(ts), now = new Date();
@@ -274,9 +292,16 @@
       const title = url
         ? `<a href="${url}" target="_blank" rel="noopener">${esc(job.title)}</a>`
         : esc(job.title);
-      const cta = url
-        ? `<a class="btn ${["new","recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" href="${url}" target="_blank" rel="noopener">${["new","recommended"].includes(job.status) ? "Apply" : "View posting"} ↗</a>`
+
+      const viewLink = url
+        ? `<a class="post-link" href="${url}" target="_blank" rel="noopener">View posting ↗</a>`
         : "";
+      const applyBtn = m.dead
+        ? ""
+        : requested.has(job.id)
+          ? `<button class="btn requested" disabled>Requested ✓</button>`
+          : `<button class="btn ${["new","recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" data-apply="${esc(job.id)}">Apply with recuter</button>`;
+      const cta = `<div class="actions">${viewLink}${applyBtn}</div>`;
 
       return `<article class="card ${m.dead ? "is-dead" : ""}"
                 style="--accent-bar:${m.color}; --pill-fg:${m.color}; --pill-border:${m.color}33; --pill-bg:${m.color}14;">
@@ -360,6 +385,28 @@
         .map((j) => new Date(j.updated_at || j.created_at || 0))
         .sort((a, b) => b - a)[0];
       if (latest && +latest) updatedEl.textContent = "Updated " + relTime(latest);
+
+      // "Apply with recuter" → drop a request in apply_requests (anon insert).
+      // The server (`npm run requests`) prepares + queues it for the apply run.
+      boardEl.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-apply]");
+        if (!btn || btn.disabled) return;
+        const jobId = btn.dataset.apply;
+        btn.disabled = true;
+        btn.textContent = "Queuing…";
+        const { error: insErr } = await supabase.from("apply_requests").insert({ job_id: jobId });
+        if (insErr) {
+          console.error(insErr);
+          btn.textContent = "Try again";
+          btn.disabled = false;
+          return;
+        }
+        requested.add(jobId);
+        saveRequested();
+        btn.textContent = "Requested ✓";
+        btn.classList.remove("primary");
+        btn.classList.add("requested");
+      });
 
       let active = "live";
       const draw = () => {

@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { AUTO_APPLY_SCORE_THRESHOLD } from '../config'
+import { initProfile } from './profile'
 import { scoreJob } from './scorer'
 import { generateResume } from './resume-generator'
 import { generateCoverLetter } from './cover-letter'
@@ -149,6 +150,8 @@ async function main() {
     console.error('ERROR: ANTHROPIC_API_KEY is not set in .env')
     process.exit(1)
   }
+
+  await initProfile()
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('  recuter — AI scoring & document generation')

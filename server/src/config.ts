@@ -1,19 +1,22 @@
 export const SEARCH = {
   keywords: [
     'GIS Analyst',
-    'GIS Developer',
-    'GIS Engineer',
-    'Geospatial Analyst',
-    'Geospatial Developer',
-    'Spatial Data Analyst',
+    'GIS Technician',
     'GIS Specialist',
-    'ArcGIS Developer',
+    'Geospatial Analyst',
+    'Geospatial Data Technician',
+    'Remote Sensing Technician',
+    'Remote Sensing Analyst',
+    'UAS Pilot',
+    'Drone Pilot',
+    'Photogrammetrist',
+    'GIS Developer',
     'Geospatial Engineer',
   ],
   locations: ['Denver, CO', 'Colorado'],
   includeRemote: true,
-  // Colorado take-home target: $85-90k net ≈ $110-115k gross
-  salaryMinGross: 100_000,
+  // Career-changer floor — entry/mid GIS+UAS roles. Raise once established.
+  salaryMinGross: 75_000,
 }
 
 // How old a posting can be (days) before we skip it

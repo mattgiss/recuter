@@ -35,22 +35,24 @@ Two halves:
 ## This repo (right now)
 
 A **public job board** — a rolling shortlist of the best-fit GIS jobs, each tagged
-with where it stands in the pipeline (recommended → applied → interviewing → offer,
-plus closed/rejected/passed). Listings stay on the board while they're still open
-(`is_active = true`); the rules for when one drops off are TBD. The board reads live
-from a Supabase `jobs` table using the public anon key (read-only via RLS).
+with where it stands in the pipeline. The board reads live from a Supabase **`board`
+view** using the public anon key (read-only).
 
-The agent that *fills* the board lives in a separate workstream — see
+The actual data lives in the **agent backend** (the `jobs`, `employers`,
+`applications`, `scraped_jobs`, … tables — already in the Supabase project, not
+created by this repo). The website never touches those tables directly; it only
+reads the curated `board` view, which exposes a safe subset of columns and joins
+each job to its employer (company name) and most recent application (pipeline
+status). The agent that *fills* those tables is a separate workstream — see
 `voice-memo-2026-06-03.md`.
 
 ```
 recuter/
-  index.html              ← the job board (reads the `jobs` table)
+  index.html              ← the job board (reads the `board` view)
   landing.html            ← the original coming-soon landing + waitlist (kept for reference)
   config.js               ← Supabase URL + anon key (filled in locally + on Vercel)
   config.example.js       ← template showing the shape of config.js
-  supabase-schema.sql     ← run this in the Supabase SQL editor (waitlist + jobs)
-  seed-jobs.sql           ← optional sample jobs so the board isn't empty (delete later)
+  supabase-schema.sql     ← waitlist table (legacy) + the public `board` view
   vercel.json             ← security headers, clean URLs
   voice-memo-2026-06-03.md
   README.md
@@ -58,38 +60,44 @@ recuter/
 
 ### The board's statuses
 
-The page understands these `status` values (set them on each row in the `jobs` table):
+The display status comes from the backend: a job's most recent `applications.status`
+if it's been applied to, otherwise the `jobs.status`. The page gives these known
+values a label, color, and ordering, and **falls back gracefully** for any other
+string (so new backend statuses still render):
 
-| status         | what it means                          | how it shows up                |
-|----------------|----------------------------------------|--------------------------------|
-| `recommended`  | clears your bar — apply now            | green, sorts to the top, "Apply" |
-| `offer`        | offer on the table — decide            | gold                           |
-| `interviewing` | in the process — prep                  | purple                         |
-| `applied`      | submitted — awaiting response          | blue                           |
-| `closed`       | posting closed / window passed         | dimmed                         |
-| `rejected`     | not moving forward                     | dimmed                         |
-| `passed`       | you chose to skip                      | dimmed                         |
+| status         | how it shows up                  |
+|----------------|----------------------------------|
+| `recommended`  | green, sorts to the top, "Apply" |
+| `offer`        | gold                             |
+| `interviewing` | purple                           |
+| `applied`      | blue                             |
+| `closed`       | dimmed                           |
+| `rejected`     | dimmed                           |
+| `passed`       | dimmed                           |
+
+> The mapping is in `STATUS` at the top of the `index.html` module script — adjust
+> labels/colors there once the backend's real status vocabulary is confirmed.
 
 By default the board shows **open roles** (everything except closed/rejected/passed);
 use the status chips at the top to filter, or "Everything" to see them all.
 
 ## Setup — one-time
 
-1. **Create the Supabase project** at [supabase.com](https://supabase.com/dashboard) (free tier is fine). Name it `recuter`.
-2. **Run the schema.** In Supabase → SQL Editor → New query, paste `supabase-schema.sql` and run it. Creates `waitlist` + `jobs`, with an RLS policy that lets the anon key **read active jobs** (but not write them).
-3. **(Optional) Seed the board.** Run `seed-jobs.sql` to drop in a few sample listings so you can see it working. Remove them later with `delete from public.jobs where source = 'sample';`.
-4. **Get the keys.** Supabase → Settings → API. Copy the **Project URL** and the **anon public** key.
-5. **Fill in `config.js` locally** (do not commit secrets — the anon key is public-safe, but service-role keys never go in here).
-6. **Push to GitHub** (see Git workflow below).
-7. **Deploy on Vercel.** Import the GitHub repo, framework = "Other", no build command needed (static).
-8. **Custom domain.** In Vercel → Project → Settings → Domains, add `recuter.com`. Vercel will give you DNS records to add at GoDaddy (A record + CNAME for `www`). Propagation is usually minutes.
+1. **Supabase project** already exists (it holds the agent backend). Grab its keys from Supabase → **Settings → API**: the **Project URL** and the **anon public** key.
+2. **Create the `board` view.** In Supabase → SQL Editor → New query, paste the `board` view block from `supabase-schema.sql` and run it. This grants the anon key read access to the view only.
+3. **Verify RLS** on the base tables (see the check at the bottom of `supabase-schema.sql`) so the anon key can't read them directly — only through the view.
+4. **Fill in `config.js`** with the URL + anon key (the anon key is public-safe; service-role keys never go here).
+5. **Push to GitHub** (see Git workflow below).
+6. **Deploy on Vercel.** Import the GitHub repo, framework = "Other", no build command needed (static).
+7. **Custom domain.** In Vercel → Project → Settings → Domains, add `recuter.com`. Add the DNS records it gives you at GoDaddy (A record + CNAME for `www`).
 
-### Adding / updating jobs
+### What appears on the board
 
-Jobs are written with the **service-role** side of Supabase, never the public anon key.
-Quickest path for now: Supabase → **Table Editor → `jobs`** → insert/edit rows by hand
-(set `status`, `match_score`, `url`, etc.). To pull one off the board, set `is_active = false`.
-Later, the agent backend writes here directly.
+Whatever the agent backend writes to `jobs` (joined to `employers`/`applications`)
+flows straight onto the board through the view. You can also curate by hand in
+Supabase → **Table Editor → `jobs`** (set `status`, `score`, `url`, …). Filtering
+rules for which jobs are "still possible" enough to show are TBD — when decided,
+add a `where` clause to the `board` view.
 
 ## Git workflow
 

@@ -243,20 +243,28 @@
         <h2>${esc(title)}</h2><p>${body}</p></div>`;
     }
 
+    function salaryText(job) {
+      if (job.salary_raw) return job.salary_raw;
+      const k = (n) => "$" + Math.round(n / 1000) + "k";
+      if (job.salary_min && job.salary_max) return k(job.salary_min) + "–" + k(job.salary_max);
+      if (job.salary_min) return k(job.salary_min) + "+";
+      if (job.salary_max) return "up to " + k(job.salary_max);
+      return null;
+    }
+
     function card(job) {
       const m = meta(job.status);
       const loc = [job.location, job.remote].filter(Boolean).join(" · ");
       const url = job.url ? esc(job.url) : null;
       const close = closesIn(job.closes_at);
+      const sal = salaryText(job);
       const tags = [];
-      if (typeof job.match_score === "number") tags.push(`<span class="tag score">${job.match_score}% match</span>`);
-      if (job.category) tags.push(`<span class="tag">${esc(job.category)}</span>`);
-      if (job.salary)   tags.push(`<span class="tag">${esc(job.salary)}</span>`);
+      if (typeof job.score === "number") tags.push(`<span class="tag score">score ${job.score}</span>`);
+      if (sal)          tags.push(`<span class="tag">${esc(sal)}</span>`);
       if (job.source)   tags.push(`<span class="tag">${esc(job.source)}</span>`);
       if (job.posted_at)tags.push(`<span class="tag">posted ${esc(relTime(job.posted_at))}</span>`);
       if (close)        tags.push(`<span class="tag ${close.urgent ? "urgent" : ""}">${esc(close.text)}</span>`);
-      if (job.applied_at && job.status === "applied")
-        tags.push(`<span class="tag">applied ${esc(relTime(job.applied_at))}</span>`);
+      if (job.applied_at) tags.push(`<span class="tag">applied ${esc(relTime(job.applied_at))}</span>`);
 
       const title = url
         ? `<a href="${url}" target="_blank" rel="noopener">${esc(job.title)}</a>`
@@ -286,7 +294,7 @@
       return jobs.slice().sort((a, b) => {
         const pa = meta(a.status).priority, pb = meta(b.status).priority;
         if (pa !== pb) return pa - pb;
-        const sa = a.match_score ?? -1, sb = b.match_score ?? -1;
+        const sa = a.score ?? -1, sb = b.score ?? -1;
         if (sa !== sb) return sb - sa;
         return new Date(b.posted_at || 0) - new Date(a.posted_at || 0);
       });
@@ -323,19 +331,19 @@
       const cfg = window.RECUTER_CONFIG || {};
       if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
         return state("info", "The board isn't connected yet",
-          "Add your Supabase URL and anon key in <code>config.js</code> and run <code>supabase-schema.sql</code> to bring it online.");
+          "Add your Supabase URL and anon key in <code>config.js</code>, then create the <code>board</code> view (see <code>supabase-schema.sql</code>).");
       }
       const supabase = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
       const { data, error } = await supabase
-        .from("jobs")
+        .from("board")
         .select("*")
-        .order("match_score", { ascending: false, nullsFirst: false });
+        .order("score", { ascending: false, nullsFirst: false });
 
       if (error) {
         console.error(error);
         return state("err", "Couldn't load the board",
-          "The jobs table may not exist yet, or its read policy isn't set. Run <code>supabase-schema.sql</code> in Supabase.");
+          "The <code>board</code> view may not exist yet, or anon can't read it. Run the view SQL in <code>supabase-schema.sql</code>.");
       }
       if (!data || !data.length) {
         return state("info", "No open roles on the board right now",

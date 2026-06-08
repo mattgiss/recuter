@@ -4,7 +4,6 @@ import { initProfile } from './profile'
 import { scoreJob } from './scorer'
 import { generateResume } from './resume-generator'
 import { generateCoverLetter } from './cover-letter'
-import { notifyNewJob } from '../notifications/discord'
 import {
   getUnscoredJobs,
   updateJobScore,
@@ -72,19 +71,7 @@ async function runScoring() {
       scored++
 
       if (result.score >= AUTO_APPLY_SCORE_THRESHOLD) {
-        notifyNewJob({
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          score: result.score,
-          reasoning: result.reasoning,
-          url: job.url,
-          salaryRaw: job.salary_raw,
-          salaryMin: job.salary_min,
-          salaryMax: job.salary_max,
-          source: job.source,
-        }).catch(e => console.warn(`  [discord] ${e.message}`))
+        // (notifications removed)
       } else {
         await updateJobStatus(job.id, 'skipped')
         skipped++

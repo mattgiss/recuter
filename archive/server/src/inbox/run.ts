@@ -7,7 +7,6 @@ import {
   upsertContact,
   saveDraftReply,
 } from '../db/helpers'
-import { notifyDraftReply } from '../notifications/discord'
 
 const RATE_LIMIT_MS = 2_000
 
@@ -62,15 +61,7 @@ async function main() {
         contactId,
       })
 
-      await notifyDraftReply({
-        company: drafted.company || '',
-        jobTitle: match?.jobTitle ?? null,
-        type: drafted.type,
-        summary: drafted.summary,
-        draft: drafted.draft,
-      }).catch(e => console.warn(`    [discord] ${e.message}`))
-
-      console.log(`    → ${drafted.type} · drafted & pinged you ✓`)
+      console.log(`    → ${drafted.type} · drafted ✓`)
       await sleep(RATE_LIMIT_MS)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -78,7 +69,7 @@ async function main() {
     }
   }
 
-  console.log('\n[inbox] Done. Review the drafts in Discord, tweak, and send.')
+  console.log('\n[inbox] Done. Review the saved drafts, tweak, and send.')
 }
 
 main().catch(err => {

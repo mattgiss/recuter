@@ -146,5 +146,5 @@ archive/                        previous version (scrapers, auto-apply, board, e
 ```
 
 The earlier, far larger version of recuter — job scrapers, Claude scoring,
-LinkedIn auto-apply, an email inbox drafter, Discord alerts, and a public job
-board — is preserved under `archive/` and in git history.
+LinkedIn auto-apply, an email inbox drafter, and a public job board — is
+preserved under `archive/` and in git history.

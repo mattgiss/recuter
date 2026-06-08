@@ -1,9 +1,9 @@
 # Applying on LinkedIn (review-first)
 
 Recuter fills in each LinkedIn **Easy Apply** form and attaches your tailored
-resume, then **stops before the final submit** and pings you on Discord. You do
-the last click. This keeps a human on the submit button — the safest way to
-automate without risking your account.
+resume, then **stops before the final submit** and lists what's ready in the
+terminal. You do the last click. This keeps a human on the submit button — the
+safest way to automate without risking your account.
 
 It runs **on your own machine** (a normal residential IP), not in the cloud.
 
@@ -23,7 +23,6 @@ LINKEDIN_PASSWORD=...
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ANTHROPIC_API_KEY=...
-DISCORD_WEBHOOK_URL=...
 ```
 
 (`.env` is gitignored — your password never gets committed.)
@@ -43,7 +42,7 @@ When you run `npm run apply`:
    waits, and the session is saved so you won't have to log in again next time.
 2. For each queued job, Recuter opens Easy Apply, uploads the tailored resume,
    and clicks through to the final review screen — then stops.
-3. You get a Discord ping: _"prepped N applications for you — just need your ok
+3. The terminal lists the prepped applications — _"N ready, just need your ok
    to hit submit."_
 4. Review each open tab and click **Submit application** on the ones you want.
 5. Press **Enter** in the terminal to close the browser when you're done.
@@ -53,6 +52,6 @@ When you run `npm run apply`:
 - Recuter never auto-submits. If a job has a screening question it can't answer,
   it leaves that tab for you with a note.
 - Jobs without Easy Apply (that bounce to the company's own site) are skipped —
-  those still show up in Discord for you to do by hand.
+  those are left for you to do by hand.
 - The saved login lives in `server/.linkedin-profile/` (gitignored). Delete that
   folder to fully log out.

@@ -3,8 +3,8 @@
 Instead of scraping job boards (which get IP-blocked), forward the **job-alert
 emails you already receive** (LinkedIn, Indeed, ZipRecruiter, Glassdoor, company
 career sites) to one address. Recuter reads each email, pulls out the postings
-with Claude, and drops them into the same pipeline — scoring, resume/cover-letter
-drafting, and Discord all happen automatically.
+with Claude, and drops them into the same pipeline — scoring and
+resume/cover-letter drafting all happen automatically.
 
 ```
 LinkedIn/Indeed alert email
@@ -17,7 +17,7 @@ jobs@gissentanna.com  →  inbound handler  →  Claude extracts postings
                                                    │
                                        npm run score / daily workflow
                                                    ▼
-                                       resume + cover letter + Discord
+                                       resume + cover letter
 ```
 
 ## The handler (one-time deploy)
@@ -66,8 +66,8 @@ In Gmail (or wherever your alerts land):
    - From: `jobs-noreply@linkedin.com OR alert@indeed.com OR noreply@ziprecruiter.com`
    - Action: **Forward to** `jobs@gissentanna.com`
 
-That's it. New alert lands → Recuter parses it → you get a Discord ping for any
-strong match, resume and cover letter already drafted.
+That's it. New alert lands → Recuter parses it → strong matches land in the
+pipeline with a resume and cover letter already drafted.
 
 ## Recruiter replies → drafted responses
 
@@ -92,8 +92,8 @@ For each waiting reply, Recuter:
 2. links it to the matching application + employer where it can,
 3. drafts a response **in your voice** (tuned in `src/agents/profile.ts` →
    `voice`), and
-4. pings you on Discord with a quick read **and the full draft** — copy, tweak,
-   send. Recuter never sends on its own.
+4. saves a quick read **and the full draft** — copy, tweak, send. Recuter never
+   sends on its own.
 
 Tune how these sound by editing the `voice` block in
 `server/src/agents/profile.ts` (sign-off, tone, interview availability).
@@ -109,4 +109,4 @@ should appear in the `jobs` table (status `new`). Run `npm run score` (or wait
 for the daily workflow) to score them and draft documents.
 
 Then forward a recruiter-style email and run `npm run inbox` — you'll get a
-drafted reply in Discord within a few seconds.
+drafted reply saved within a few seconds.

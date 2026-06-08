@@ -3,7 +3,6 @@ import * as path from 'path'
 import { LinkedInApplier } from './linkedin'
 import { renderResumePdf } from './resume-pdf'
 import { getPreparedApplications, markApplicationPrepared } from '../db/helpers'
-import { notifyReadyToApply } from '../notifications/discord'
 
 const ARTIFACTS_DIR = path.resolve(__dirname, '../../.artifacts')
 
@@ -69,8 +68,7 @@ async function main() {
   }
 
   if (readyForReview.length) {
-    await notifyReadyToApply(readyForReview).catch(e => console.warn(`[discord] ${e.message}`))
-    console.log(`\n[apply] ${readyForReview.length} application(s) prepped. Pinged you on Discord.`)
+    console.log(`\n[apply] ${readyForReview.length} application(s) prepped and ready for review.`)
   } else {
     console.log('\n[apply] Nothing ended up ready for review this round.')
   }

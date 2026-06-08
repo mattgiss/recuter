@@ -1,0 +1,10 @@
+{
+  "name": "recuter-helper",
+  "version": "1.0.0",
+  "description": "Tiny local file-writer that saves recuter's generated resumes and cover letters to a folder on your computer.",
+  "private": true,
+  "bin": { "recuter-helper": "server.js" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

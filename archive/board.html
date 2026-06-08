@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>recuter — the board</title>
+  <meta name="description" content="A live roll-up of the best-fit GIS jobs, with where each one stands: recommended, applied, interviewing, and beyond." />
+  <meta property="og:title" content="recuter — the board" />
+  <meta property="og:description" content="The best-fit jobs, at a glance — and where each one stands in the pipeline." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#D6D6D6" />
+  <style>
+    /* Matt Gray brand — Silver background, Dark Matter text, brand accents */
+    :root {
+      --bg: #D6D6D6;        /* Silver */
+      --bg-2: #ffffff;      /* card surface */
+      --bg-3: #ECECEC;      /* chips / tags */
+      --fg: #0D121A;        /* Dark Matter */
+      --muted: #363845;     /* Space Gray */
+      --faint: #6E7480;
+      --accent: #F23861;    /* Nebula */
+      --border: #C2C2C2;
+      --border-2: #ABABB2;
+      /* status colors — brand accents, tuned for contrast on white cards */
+      --s-new:         #F23861;  /* Nebula  — top action */
+      --s-recommended: #1F8AA0;  /* Cyan    (darkened) */
+      --s-offer:       #120ACC;  /* BSoD */
+      --s-interviewing:#7C5BB0;  /* Violet  (darkened) */
+      --s-applied:     #363845;  /* Space Gray — in flight */
+      --s-closed:      #8A8F99;
+      --s-rejected:    #B23A4B;
+      --s-passed:      #8A8F99;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(242, 56, 97, 0.06), transparent 60%),
+        radial-gradient(900px 500px at 110% 110%, rgba(71, 178, 196, 0.07), transparent 60%),
+        var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+
+    header.top {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0 1.25rem;
+    }
+    .brand { font-weight: 800; letter-spacing: -0.02em; font-size: 1.25rem; }
+    .brand .dot { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.85rem; }
+    .updated { color: var(--faint); font-size: 0.78rem; }
+
+    /* filter bar */
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+      padding: 0.25rem 0 1.5rem; align-items: center;
+    }
+    .chip {
+      font-size: 0.82rem; color: var(--muted); cursor: pointer;
+      padding: 0.4rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--bg-2);
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+      user-select: none;
+    }
+    .chip:hover { border-color: var(--border-2); color: var(--fg); }
+    .chip[aria-pressed="true"] {
+      color: var(--fg); border-color: var(--border-2); background: var(--bg-3);
+    }
+    .chip .count {
+      font-variant-numeric: tabular-nums; font-size: 0.72rem;
+      color: var(--faint); background: rgba(13,18,26,0.06);
+      padding: 0.05rem 0.4rem; border-radius: 999px;
+    }
+    .chip .swatch { width: 7px; height: 7px; border-radius: 50%; }
+    .spacer { flex: 1 1 auto; }
+
+    /* job cards */
+    .board { display: flex; flex-direction: column; gap: 0.75rem; }
+    .card {
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--bg-2);
+      padding: 1rem 1.1rem; position: relative; overflow: hidden;
+      box-shadow: 0 1px 2px rgba(13,18,26,0.06), 0 4px 12px -8px rgba(13,18,26,0.10);
+      transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    }
+    .card::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--accent-bar, var(--border-2));
+    }
+    .card:hover { border-color: var(--border-2); transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(13,18,26,0.08), 0 10px 20px -10px rgba(13,18,26,0.16); }
+    .card.is-dead { opacity: 0.55; }
+
+    .card-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .role { font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; line-height: 1.25; }
+    .role a { text-decoration: none; }
+    .role a:hover { text-decoration: underline; text-decoration-color: var(--border-2); }
+    .org { color: var(--muted); font-size: 0.92rem; margin: 0.2rem 0 0; }
+    .org .sep { color: var(--faint); padding: 0 0.4rem; }
+
+    .pill {
+      flex: none; font-size: 0.74rem; font-weight: 600; white-space: nowrap;
+      padding: 0.3rem 0.6rem; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      border: 1px solid var(--pill-border, var(--border-2));
+      color: var(--pill-fg, var(--fg)); background: var(--pill-bg, transparent);
+    }
+    .pill .swatch { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem;
+      margin-top: 0.85rem; align-items: center;
+    }
+    .tag {
+      font-size: 0.74rem; color: var(--muted);
+      padding: 0.22rem 0.55rem; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg-3);
+    }
+    .tag.score { color: var(--accent); border-color: rgba(242,56,97,0.3); }
+    .tag.urgent { color: #C2410C; border-color: rgba(194,65,12,0.3); }
+
+    .card-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-top: 0.9rem; flex-wrap: wrap;
+    }
+    .action-hint { color: var(--muted); font-size: 0.82rem; }
+    .btn {
+      font-size: 0.85rem; font-weight: 600; text-decoration: none;
+      padding: 0.5rem 0.9rem; border-radius: 8px; white-space: nowrap;
+      border: 1px solid var(--border-2); color: var(--fg); background: var(--bg-3);
+      transition: transform 120ms ease, border-color 120ms ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--faint); }
+    .btn.primary {
+      background: var(--accent); color: #ffffff; border-color: transparent;
+      box-shadow: 0 8px 24px -12px rgba(242, 56, 97, 0.55);
+    }
+    .btn:disabled { cursor: default; }
+    .btn.requested {
+      background: var(--bg-3); color: var(--muted); border-color: var(--border);
+      box-shadow: none; cursor: default;
+    }
+    .actions { display: flex; align-items: center; gap: 0.6rem; }
+    .post-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; white-space: nowrap; }
+    .post-link:hover { color: var(--fg); text-decoration: underline; }
+
+    /* states */
+    .state {
+      text-align: center; color: var(--muted); padding: 4rem 1rem;
+      border: 1px dashed var(--border); border-radius: 12px; background: var(--bg-2);
+    }
+    .state h2 { color: var(--fg); font-weight: 700; font-size: 1.1rem; margin: 0 0 0.5rem; }
+    .state p { margin: 0.25rem auto; max-width: 46ch; font-size: 0.9rem; }
+    .state.err { border-color: rgba(255,122,122,0.3); }
+
+    .skeleton { height: 116px; border-radius: 12px; background: var(--bg-2);
+      border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .skeleton::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
+      transform: translateX(-100%); animation: shimmer 1.3s infinite;
+    }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+    footer.foot {
+      margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border);
+      color: var(--faint); font-size: 0.82rem;
+      display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+    }
+    footer.foot a { color: var(--faint); text-decoration: none; }
+    footer.foot a:hover { color: var(--fg); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <div class="brand">recuter<span class="dot">.</span></div>
+        <div class="subtitle">The best-fit jobs, and where each one stands.</div>
+      </div>
+      <div class="updated" id="updated"></div>
+    </header>
+
+    <nav class="filters" id="filters" aria-label="Filter by status"></nav>
+
+    <main class="board" id="board" aria-live="polite">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </main>
+
+    <footer class="foot">
+      <span>&copy; <span id="y"></span> recuter</span>
+      <span>A rolling shortlist — listings stay up while they're still open.</span>
+    </footer>
+  </div>
+
+  <script src="./config.js"></script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    // --- status taxonomy: drives color, ordering, and the action shown ---
+    // priority = lower sorts higher (action-first board)
+    const STATUS = {
+      new:          { label: "New",          action: "Fresh find — review & apply",   color: "var(--s-new)",         priority: 0, dead: false },
+      recommended:  { label: "Recommended",  action: "Apply now — clears your bar",    color: "var(--s-recommended)", priority: 1, dead: false },
+      offer:        { label: "Offer",        action: "Offer on the table — decide",    color: "var(--s-offer)",       priority: 2, dead: false },
+      interviewing: { label: "Interviewing", action: "In process — prep",              color: "var(--s-interviewing)",priority: 3, dead: false },
+      applied:      { label: "Applied",      action: "Submitted — awaiting response",  color: "var(--s-applied)",     priority: 4, dead: false },
+      closed:       { label: "Closed",       action: "Posting closed",                 color: "var(--s-closed)",      priority: 5, dead: true  },
+      rejected:     { label: "Rejected",     action: "Not moving forward",             color: "var(--s-rejected)",    priority: 6, dead: true  },
+      passed:       { label: "Passed",       action: "You skipped this one",           color: "var(--s-passed)",      priority: 7, dead: true  }
+    };
+    const fallback = (s) => ({ label: s || "Unknown", action: "", color: "var(--border-2)", priority: 9, dead: false });
+    const meta = (s) => STATUS[s] || fallback(s);
+
+    const boardEl  = document.getElementById("board");
+    const filtersEl= document.getElementById("filters");
+    const updatedEl= document.getElementById("updated");
+    document.getElementById("y").textContent = new Date().getFullYear();
+
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+    // Jobs you've already tapped "Apply" on (remembered locally — the board
+    // can't read the private apply_requests table back).
+    const REQ_KEY = "recuter_requested";
+    const requested = new Set((() => {
+      try { return JSON.parse(localStorage.getItem(REQ_KEY) || "[]"); } catch { return []; }
+    })());
+    const saveRequested = () => {
+      try { localStorage.setItem(REQ_KEY, JSON.stringify([...requested])); } catch {}
+    };
+
+    function relTime(ts) {
+      if (!ts) return "";
+      const d = new Date(ts), now = new Date();
+      const days = Math.round((now - d) / 86400000);
+      if (days <= 0) return "today";
+      if (days === 1) return "yesterday";
+      if (days < 30) return days + "d ago";
+      const mo = Math.round(days / 30);
+      return mo + "mo ago";
+    }
+    function closesIn(ts) {
+      if (!ts) return null;
+      const days = Math.round((new Date(ts) - new Date()) / 86400000);
+      if (days < 0) return { text: "closed", urgent: true };
+      if (days === 0) return { text: "closes today", urgent: true };
+      if (days <= 3) return { text: `closes in ${days}d`, urgent: true };
+      return { text: `closes in ${days}d`, urgent: false };
+    }
+
+    function state(kind, title, body) {
+      boardEl.innerHTML = `<div class="state ${kind === "err" ? "err" : ""}">
+        <h2>${esc(title)}</h2><p>${body}</p></div>`;
+    }
+
+    function salaryText(job) {
+      if (job.salary_raw) return job.salary_raw;
+      const k = (n) => "$" + Math.round(n / 1000) + "k";
+      if (job.salary_min && job.salary_max) return k(job.salary_min) + "–" + k(job.salary_max);
+      if (job.salary_min) return k(job.salary_min) + "+";
+      if (job.salary_max) return "up to " + k(job.salary_max);
+      return null;
+    }
+
+    function card(job) {
+      const m = meta(job.status);
+      const loc = [job.location, job.remote].filter(Boolean).join(" · ");
+      const url = job.url ? esc(job.url) : null;
+      const close = closesIn(job.closes_at);
+      const sal = salaryText(job);
+      const tags = [];
+      if (typeof job.score === "number") tags.push(`<span class="tag score">score ${job.score}</span>`);
+      if (sal)          tags.push(`<span class="tag">${esc(sal)}</span>`);
+      if (job.source)   tags.push(`<span class="tag">${esc(job.source)}</span>`);
+      if (job.posted_at)tags.push(`<span class="tag">posted ${esc(relTime(job.posted_at))}</span>`);
+      if (close)        tags.push(`<span class="tag ${close.urgent ? "urgent" : ""}">${esc(close.text)}</span>`);
+      if (job.applied_at) tags.push(`<span class="tag">applied ${esc(relTime(job.applied_at))}</span>`);
+
+      const title = url
+        ? `<a href="${url}" target="_blank" rel="noopener">${esc(job.title)}</a>`
+        : esc(job.title);
+
+      const viewLink = url
+        ? `<a class="post-link" href="${url}" target="_blank" rel="noopener">View posting ↗</a>`
+        : "";
+      const applyBtn = m.dead
+        ? ""
+        : requested.has(job.id)
+          ? `<button class="btn requested" disabled>Requested ✓</button>`
+          : `<button class="btn ${["new","recommended","offer","interviewing"].includes(job.status) ? "primary" : ""}" data-apply="${esc(job.id)}">Apply with recuter</button>`;
+      const cta = `<div class="actions">${viewLink}${applyBtn}</div>`;
+
+      return `<article class="card ${m.dead ? "is-dead" : ""}"
+                style="--accent-bar:${m.color}; --pill-fg:${m.color}; --pill-border:${m.color}33; --pill-bg:${m.color}14;">
+        <div class="card-head">
+          <div>
+            <h3 class="role">${title}</h3>
+            <p class="org">${esc(job.company)}${loc ? `<span class="sep">·</span>${esc(loc)}` : ""}</p>
+          </div>
+          <span class="pill"><span class="swatch"></span>${esc(m.label)}</span>
+        </div>
+        ${tags.length ? `<div class="meta">${tags.join("")}</div>` : ""}
+        <div class="card-foot">
+          <span class="action-hint">${esc(m.action)}</span>
+          ${cta}
+        </div>
+      </article>`;
+    }
+
+    function sortJobs(jobs) {
+      return jobs.slice().sort((a, b) => {
+        const pa = meta(a.status).priority, pb = meta(b.status).priority;
+        if (pa !== pb) return pa - pb;
+        const sa = a.score ?? -1, sb = b.score ?? -1;
+        if (sa !== sb) return sb - sa;
+        return new Date(b.posted_at || 0) - new Date(a.posted_at || 0);
+      });
+    }
+
+    function renderFilters(jobs, active, onPick) {
+      const counts = {};
+      jobs.forEach((j) => { counts[j.status] = (counts[j.status] || 0) + 1; });
+      const present = Object.keys(STATUS).filter((s) => counts[s]);
+      const liveCount = jobs.filter((j) => !meta(j.status).dead).length;
+
+      const chips = [
+        chip("live", `Open roles`, liveCount, active === "live", null),
+        ...present.map((s) => chip(s, meta(s).label, counts[s], active === s, meta(s).color)),
+        chip("all", "Everything", jobs.length, active === "all", null)
+      ];
+      filtersEl.innerHTML = chips.join("");
+      filtersEl.querySelectorAll(".chip").forEach((el) =>
+        el.addEventListener("click", () => onPick(el.dataset.key)));
+    }
+    function chip(key, label, count, pressed, color) {
+      return `<button class="chip" data-key="${key}" aria-pressed="${pressed}">
+        ${color ? `<span class="swatch" style="background:${color}"></span>` : ""}
+        ${esc(label)}<span class="count">${count}</span></button>`;
+    }
+
+    function applyFilter(jobs, active) {
+      if (active === "all") return jobs;
+      if (active === "live") return jobs.filter((j) => !meta(j.status).dead);
+      return jobs.filter((j) => j.status === active);
+    }
+
+    async function main() {
+      const cfg = window.RECUTER_CONFIG || {};
+      if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+        return state("info", "The board isn't connected yet",
+          "Add your Supabase URL and anon key in <code>config.js</code>, then apply migration <code>002_board_and_rls.sql</code> to create the <code>board</code> view.");
+      }
+      const supabase = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+      const { data, error } = await supabase
+        .from("board")
+        .select("*")
+        .order("score", { ascending: false, nullsFirst: false });
+
+      if (error) {
+        console.error(error);
+        return state("err", "Couldn't load the board",
+          "The <code>board</code> view may not exist yet, or anon can't read it. Apply migration <code>002_board_and_rls.sql</code>.");
+      }
+      if (!data || !data.length) {
+        return state("info", "No open roles on the board right now",
+          "New best-fit jobs land here as they're surfaced. Check back soon.");
+      }
+
+      const jobs = sortJobs(data);
+      const latest = data
+        .map((j) => new Date(j.updated_at || j.created_at || 0))
+        .sort((a, b) => b - a)[0];
+      if (latest && +latest) updatedEl.textContent = "Updated " + relTime(latest);
+
+      // "Apply with recuter" → drop a request in apply_requests (anon insert).
+      // The server (`npm run requests`) prepares + queues it for the apply run.
+      boardEl.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-apply]");
+        if (!btn || btn.disabled) return;
+        const jobId = btn.dataset.apply;
+        btn.disabled = true;
+        btn.textContent = "Queuing…";
+        const { error: insErr } = await supabase.from("apply_requests").insert({ job_id: jobId });
+        if (insErr) {
+          console.error(insErr);
+          btn.textContent = "Try again";
+          btn.disabled = false;
+          return;
+        }
+        requested.add(jobId);
+        saveRequested();
+        btn.textContent = "Requested ✓";
+        btn.classList.remove("primary");
+        btn.classList.add("requested");
+      });
+
+      let active = "live";
+      const draw = () => {
+        renderFilters(jobs, active, (k) => { active = k; draw(); });
+        const shown = applyFilter(jobs, active);
+        boardEl.innerHTML = shown.length
+          ? shown.map(card).join("")
+          : `<div class="state"><h2>Nothing here</h2><p>No roles with this status.</p></div>`;
+      };
+      draw();
+    }
+
+    main().catch((e) => {
+      console.error(e);
+      state("err", "Something went wrong", "Try a refresh in a moment.");
+    });
+  </script>
+</body>
+</html>

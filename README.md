@@ -36,30 +36,58 @@ cover letter for any job, on demand. That's the whole product.
 
 ---
 
-## Setup
+## What you need to run in Supabase
 
-### 1. Database
+Exactly three things — a bit of SQL, one Edge Function, and one secret.
 
-Apply the migrations in `supabase/migrations/` (the profile tables are
-`003_profile.sql`; SEO keywords are added in `005_seo_keywords.sql`). The
-`003` migration seeds an example profile — edit it to be yours in the Table
-Editor.
+### 1. SQL: profile tables + SEO keywords
+
+The app reads four tables: `profile`, `experience`, `education`,
+`certifications`. They're created (and seeded with an example) by
+`003_profile.sql`, and `005_seo_keywords.sql` adds the `seo_keywords` column.
+
+- **Fresh project:** run `003_profile.sql` then `005_seo_keywords.sql`.
+- **Existing recuter project (these tables already exist):** you only need to
+  run the new `005_seo_keywords.sql`.
+
+Either paste the SQL into the Supabase **SQL Editor** (Dashboard → SQL Editor →
+New query → paste → Run), or use the CLI:
 
 ```bash
-supabase db push        # or paste the SQL in the Supabase SQL editor
+supabase db push        # applies everything in supabase/migrations/
 ```
 
-### 2. Backend function
+> The other migrations — `001_initial_schema.sql`, `002_board_and_rls.sql`,
+> `004_apply_requests.sql` — belong to the **old** job-board system and are not
+> used by this app. Leaving them applied is harmless; see
+> `supabase/migrations/README.md`.
 
-```bash
-supabase functions deploy generate --no-verify-jwt
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-```
+### 2. Edge Function: `generate`
 
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
-`--no-verify-jwt` lets the public site call it with the anon key.
+This is the entire backend. Deploy it from `supabase/functions/generate/`.
 
-### 3. Frontend
+- **CLI:** `supabase functions deploy generate --no-verify-jwt`
+- **Dashboard:** Edge Functions → Deploy a new function → name it `generate` →
+  paste the contents of `supabase/functions/generate/index.ts`. Turn **"Verify
+  JWT" off** so the public site can call it with the anon key.
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into the function
+automatically — you don't set those.
+
+### 3. Secret: your Anthropic API key
+
+The function calls Claude, so it needs your key:
+
+- **CLI:** `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...`
+- **Dashboard:** Edge Functions → Secrets → add `ANTHROPIC_API_KEY`.
+
+That's everything on the Supabase side. **No `npm`, no server to host, no cron.**
+
+---
+
+## Frontend setup
+
+### Point the site at your project
 
 `config.js` holds your project URL and **anon** key (public-safe — the function
 does the privileged work):
@@ -74,7 +102,7 @@ window.RECUTER_CONFIG = {
 Deploy the repo root as a static site (GitHub Pages or Vercel — `vercel.json` is
 included). The custom domain is set via `CNAME` (recuter.com).
 
-### 4. Local helper (optional)
+### Local helper (optional)
 
 For "save to any folder in any browser":
 

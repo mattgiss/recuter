@@ -41,6 +41,13 @@ function selectedFormats() {
   return [...document.querySelectorAll('.formats input:checked')].map((c) => c.value);
 }
 
+// The logged-in user's access token (set up by the login gate in the page).
+async function getAuthToken() {
+  if (!window.sbClient) return null;
+  const { data } = await window.sbClient.auth.getSession();
+  return data && data.session ? data.session.access_token : null;
+}
+
 // Markdown -> HTML (marked loaded globally)
 function mdToHtml(md) {
   return window.marked ? window.marked.parse(md) : `<pre>${md}</pre>`;
@@ -206,6 +213,12 @@ async function generate() {
     return;
   }
 
+  const token = await getAuthToken();
+  if (!token) {
+    setStatus('bad', 'Your session expired — please sign in again.');
+    return;
+  }
+
   el.generate.disabled = true;
   setStatus('work', '<span class="spinner"></span>Reading the job and tailoring your resume + cover letter… (15–40s)');
 
@@ -215,7 +228,7 @@ async function generate() {
       headers: {
         'Content-Type': 'application/json',
         apikey: cfg.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ url, jobText }),
     });

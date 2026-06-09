@@ -15,6 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/html-docx-js@0.3.1/dist/html-docx.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* PIN gate overlay */
     #gate {
@@ -30,9 +31,9 @@
     #gate h1 .dot { color: #5b8cff; }
     #gate p { margin: 0 0 18px; color: #9aa4b2; font-size: 13.5px; }
     #gate input {
-      width: 100%; text-align: center; letter-spacing: 6px; font-size: 20px;
+      width: 100%; font-size: 15px;
       background: #1e222b; border: 1px solid #2a2f3a; border-radius: 10px;
-      color: #e7ebf0; padding: 12px 14px; margin-bottom: 12px;
+      color: #e7ebf0; padding: 12px 14px; margin-bottom: 10px;
     }
     #gate input:focus { outline: none; border-color: #5b8cff; }
     #gate button {
@@ -45,15 +46,15 @@
   </style>
 </head>
 <body class="locked">
-  <!-- ── PIN gate ─────────────────────────────────────────── -->
+  <!-- ── login gate ───────────────────────────────────────── -->
   <div id="gate">
     <div class="box">
       <h1>recuter<span class="dot">.</span></h1>
-      <p>Enter your PIN to continue.</p>
+      <p>Sign in to continue.</p>
       <form id="gateForm">
-        <input id="pin" type="password" inputmode="numeric" autocomplete="off"
-               placeholder="••••" aria-label="PIN" autofocus />
-        <button type="submit">Unlock</button>
+        <input id="email" type="email" autocomplete="username" placeholder="you@email.com" aria-label="Email" autofocus />
+        <input id="password" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" />
+        <button type="submit" id="signIn">Sign in</button>
         <div class="err" id="gateErr" role="alert"></div>
       </form>
     </div>
@@ -121,47 +122,71 @@
       <footer>
         Your master profile lives in Supabase — edit skills, experience, and SEO keywords anytime.
         &nbsp;·&nbsp; <a href="/portfolio/">Portfolio</a>
+        &nbsp;·&nbsp; <a href="#" onclick="event.preventDefault(); window.recuterSignOut && window.recuterSignOut();">Sign out</a>
       </footer>
     </div>
   </div>
 
-  <!-- ── gate logic ───────────────────────────────────────── -->
+  <!-- ── auth gate (Supabase email/password) ──────────────── -->
   <script>
     (function () {
-      // SHA-256 of the PIN. Casual gate only — not real security.
-      var EXPECTED = '274dfec6e079fb08d6b5771537c54d3f0bd36c64c3d8ed0a4e6d2f201b489274';
-      var KEY = 'recuter_unlocked';
+      var cfg = window.RECUTER_CONFIG || {};
       var gate = document.getElementById('gate');
       var app = document.getElementById('app');
       var form = document.getElementById('gateForm');
-      var pin = document.getElementById('pin');
+      var emailEl = document.getElementById('email');
+      var passEl = document.getElementById('password');
+      var btn = document.getElementById('signIn');
       var err = document.getElementById('gateErr');
+
+      if (!window.supabase || !cfg.SUPABASE_URL) {
+        err.textContent = 'Auth failed to load — check config.js.';
+        return;
+      }
+      // Shared client; app.js reads the session token from window.sbClient.
+      var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      window.sbClient = sb;
 
       function reveal() {
         gate.style.display = 'none';
         app.classList.remove('hidden');
         document.body.classList.remove('locked');
       }
-      async function sha256(s) {
-        var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-        return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+      function lock() {
+        gate.style.display = 'flex';
+        app.classList.add('hidden');
+        document.body.classList.add('locked');
       }
 
-      if (sessionStorage.getItem(KEY) === '1') { reveal(); return; }
+      // Already signed in? (Supabase persists the session in localStorage.)
+      sb.auth.getSession().then(function (res) {
+        if (res.data && res.data.session) reveal();
+      });
 
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
         err.textContent = '';
-        var hash = await sha256((pin.value || '').trim());
-        if (hash === EXPECTED) {
-          sessionStorage.setItem(KEY, '1');
-          reveal();
-        } else {
-          err.textContent = 'Incorrect PIN.';
-          pin.value = '';
-          pin.focus();
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+        var out = await sb.auth.signInWithPassword({
+          email: (emailEl.value || '').trim(),
+          password: passEl.value || '',
+        });
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+        if (out.error) {
+          err.textContent = out.error.message || 'Sign-in failed.';
+          passEl.value = '';
+          return;
         }
+        reveal();
       });
+
+      // Expose sign-out for the in-app button.
+      window.recuterSignOut = async function () {
+        await sb.auth.signOut();
+        lock();
+      };
     })();
   </script>
   <script src="/app/app.js"></script>

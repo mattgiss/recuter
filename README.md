@@ -69,17 +69,31 @@ This is the entire backend. Deploy it from `supabase/functions/generate/`.
 - **CLI:** `supabase functions deploy generate --no-verify-jwt`
 - **Dashboard:** Edge Functions → Deploy a new function → name it `generate` →
   paste the contents of `supabase/functions/generate/index.ts`. Turn **"Verify
-  JWT" off** so the public site can call it with the anon key.
+  JWT" off** (the function does its own auth check — see step 4 — and this keeps
+  the CORS preflight working).
 
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into the function
-automatically — you don't set those.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are injected
+into the function automatically — you don't set those.
 
-### 3. Secret: your Anthropic API key
+### 3. Secrets: Anthropic key + allowed email
 
-The function calls Claude, so it needs your key:
+```bash
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-... ALLOWED_EMAIL=you@example.com
+```
 
-- **CLI:** `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...`
-- **Dashboard:** Edge Functions → Secrets → add `ANTHROPIC_API_KEY`.
+(Or Dashboard → Edge Functions → Secrets.) `ANTHROPIC_API_KEY` lets the function
+call Claude. `ALLOWED_EMAIL` restricts the function to a single account — even if
+someone else signs up, only this email may generate.
+
+### 4. Auth: create your login
+
+The function rejects anyone who isn't signed in, so create your user:
+
+1. **Authentication → Users → Add user** → your email + a password
+   (set "Auto Confirm" so you can sign in immediately).
+2. **Authentication → Providers → Email** → make sure it's enabled.
+3. **Authentication → Sign-ups** → **turn off "Allow new users to sign up"** so
+   no one else can create an account.
 
 That's everything on the Supabase side. **No `npm`, no server to host, no cron.**
 
@@ -90,15 +104,16 @@ That's everything on the Supabase side. **No `npm`, no server to host, no cron.*
 The site has two pages:
 
 - **`/` (`index.html`)** — a public **coming-soon** page.
-- **`/mattgiss/` (`mattgiss/index.html`)** — the actual app, behind a **PIN gate**.
-  It shares `/app/`, `/config.js`, and `/portfolio/` with the root via absolute
-  paths.
+- **`/mattgiss/` (`mattgiss/index.html`)** — the actual app, behind a **Supabase
+  email/password login**. It shares `/app/`, `/config.js`, and `/portfolio/`
+  with the root via absolute paths.
 
-> **The PIN is a casual gate, not security.** It hides the UI from casual
-> visitors, but the page code and the public anon key are still viewable by
-> anyone who inspects the site. To change it, replace the `EXPECTED` SHA-256
-> hash in `mattgiss/index.html` (hash your new PIN: `printf '%s' 'YOURPIN' |
-> sha256sum`). For real protection, switch to Supabase Auth on the function.
+> **How the lock works.** Sign-in uses Supabase Auth; the browser sends your
+> logged-in token to the `generate` function, which validates it and checks it
+> matches `ALLOWED_EMAIL` before doing any (paid) work. The public anon key in
+> `config.js` is no longer enough to call the function — a real session is
+> required. Sign-ups are disabled, so only the user you created in step 4 can
+> get in.
 
 ### Point the site at your project
 
@@ -149,7 +164,7 @@ No redeploy needed — changes take effect on the next generation.
 
 ```
 index.html                      public coming-soon page
-mattgiss/index.html             the app, behind a PIN gate
+mattgiss/index.html             the app, behind a Supabase login
 app/                            front-end (styles.css, app.js)
 config.js                       Supabase URL + anon key
 supabase/functions/generate/    the backend (one Edge Function)

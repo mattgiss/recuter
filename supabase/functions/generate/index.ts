@@ -20,6 +20,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+// Only this account may use the function (defense in depth). Set with:
+//   supabase secrets set ALLOWED_EMAIL=you@example.com
+const ALLOWED_EMAIL = (Deno.env.get('ALLOWED_EMAIL') ?? '').toLowerCase()
 
 const WRITER_MODEL = 'claude-opus-4-8'
 const META_MODEL = 'claude-haiku-4-5-20251001'
@@ -37,6 +41,19 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   })
+
+// ── Auth: require a signed-in Supabase user ────────────────
+// The browser sends the logged-in user's access token as the Authorization
+// header. We validate it here. The public anon key is NOT a user token, so
+// anonymous callers (anyone who finds the anon key) are rejected.
+async function authedUser(req: Request) {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } })
+  const { data, error } = await client.auth.getUser(token)
+  if (error || !data.user) return null
+  return data.user
+}
 
 // ── Anthropic Messages API (REST, no SDK) ──────────────────
 async function claude(opts: {
@@ -266,6 +283,14 @@ Never use clichés like "I am writing to express my interest" or "I would be a g
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
+
+  // Require a signed-in user before doing any (paid) work.
+  const user = await authedUser(req)
+  if (!user) return json({ error: 'Sign in required.' }, 401)
+  if (ALLOWED_EMAIL && (user.email ?? '').toLowerCase() !== ALLOWED_EMAIL) {
+    return json({ error: 'Not authorized for this account.' }, 403)
+  }
+
   if (!ANTHROPIC_API_KEY) return json({ error: 'ANTHROPIC_API_KEY not set' }, 500)
 
   let payload: { url?: string; jobText?: string }

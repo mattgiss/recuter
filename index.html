@@ -3,81 +3,90 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>recuter — tailored resume + cover letter from a job link</title>
-  <meta name="description" content="Paste a job listing URL. Get a tailored resume and cover letter, saved to your computer." />
-  <link rel="icon" href="assets/favicon.ico" />
-  <link rel="stylesheet" href="app/styles.css" />
-  <!-- config: Supabase URL + anon key (public-safe) -->
-  <script src="config.js"></script>
-  <!-- libraries: markdown render, PDF export, DOCX export -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
-  <script src="https://unpkg.com/html-docx-js@0.3.1/dist/html-docx.js"></script>
+  <title>recuter — coming soon</title>
+  <meta name="description" content="recuter is coming soon." />
+  <meta property="og:title" content="recuter" />
+  <meta property="og:description" content="Coming soon." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0b0d10" />
+  <link rel="icon" href="/assets/favicon.ico" />
+  <style>
+    :root {
+      --bg: #0b0d10; --bg-2: #11141a; --fg: #e8ecf1;
+      --muted: #8a93a0; --accent: #5cf2a3; --border: #1f242c;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(92, 242, 163, 0.07), transparent 60%),
+        radial-gradient(900px 500px at 110% 110%, rgba(92, 242, 163, 0.05), transparent 60%),
+        var(--bg);
+      color: var(--fg); -webkit-font-smoothing: antialiased;
+    }
+    main { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+    header, footer { padding: 1.5rem 2rem; }
+    header { display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 1.15rem; }
+    .brand .dot { color: var(--accent); }
+    .status {
+      font-size: 0.78rem; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.7rem; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--bg-2);
+    }
+    .status::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(92, 242, 163, 0.6); }
+      70% { box-shadow: 0 0 0 10px rgba(92, 242, 163, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(92, 242, 163, 0); }
+    }
+    section.hero {
+      max-width: 880px; margin: 0 auto; padding: 4rem 2rem;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.25rem); line-height: 1.04;
+      letter-spacing: -0.035em; margin: 0 0 1.25rem; font-weight: 800;
+    }
+    h1 .accent { color: var(--accent); }
+    p.lede {
+      font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.55;
+      color: var(--muted); max-width: 60ch; margin: 0 0 2.25rem;
+    }
+    footer {
+      color: var(--muted); font-size: 0.85rem;
+      display: flex; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--fg); }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <header class="top">
-      <h1>recuter<span class="dot">.</span></h1>
-      <p>Paste a job link. Get a tailored resume and cover letter, saved to your computer.</p>
+  <main>
+    <header>
+      <div class="brand">recuter<span class="dot">.</span></div>
+      <span class="status">coming soon</span>
     </header>
 
-    <section class="card">
-      <label class="field" for="url">Job listing URL</label>
-      <div class="row">
-        <input id="url" class="grow" type="url" placeholder="https://… link to the job posting" autocomplete="off" />
-        <button id="generate" class="primary">Generate</button>
-      </div>
-
-      <details class="paste" id="pasteBox">
-        <summary>Paste the job description instead (more reliable for LinkedIn / Indeed)</summary>
-        <div>
-          <label class="field" for="jobText">Job description text</label>
-          <textarea id="jobText" placeholder="Paste the full job posting text here…"></textarea>
-        </div>
-      </details>
-
-      <div id="status" class="status info">Maintains your skills, experience, and SEO keywords — and tailors every application to the role.</div>
-    </section>
-
-    <section class="card" id="results" hidden>
-      <div class="meta-bar">
-        <span class="title" id="metaTitle"></span>
-        <span class="company" id="metaCompany"></span>
-      </div>
-
-      <div class="tabs">
-        <button class="tab active" id="tabResume">Resume</button>
-        <button class="tab" id="tabLetter">Cover letter</button>
-      </div>
-      <div class="doc" id="resumeDoc"></div>
-      <div class="doc letter" id="letterDoc" hidden></div>
-
-      <div class="save-bar">
-        <div class="formats">
-          <span style="color:var(--muted);font-size:14px;">Save as:</span>
-          <label><input type="checkbox" value="pdf" checked /> PDF</label>
-          <label><input type="checkbox" value="docx" checked /> DOCX</label>
-          <label><input type="checkbox" value="md" /> Markdown</label>
-        </div>
-        <div class="save-actions">
-          <button id="download">Download</button>
-          <button id="saveFolder">Save to folder…</button>
-          <button id="sendHelper">Send to local helper</button>
-        </div>
-      </div>
-      <p class="hint">
-        <strong>Download</strong> → your Downloads folder (any browser).
-        <strong>Save to folder…</strong> → pick any folder (Chrome/Edge).
-        <strong>Local helper</strong> → writes to a folder you configure, auto-organized by company, any browser (needs the helper running — see README).
+    <section class="hero">
+      <h1>Something new is <span class="accent">on the way</span>.</h1>
+      <p class="lede">
+        recuter is being rebuilt. Check back soon.
       </p>
     </section>
 
     <footer>
-      Your master profile lives in Supabase — edit skills, experience, and SEO keywords anytime.
-      &nbsp;·&nbsp; <a href="portfolio/">Portfolio</a>
+      <span>&copy; <span id="y"></span> recuter</span>
+      <span>Coming soon.</span>
     </footer>
-  </div>
-
-  <script src="app/app.js"></script>
+  </main>
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 </body>
 </html>

@@ -106,16 +106,34 @@ function htmlToPdf(innerHtml) {
 }
 
 // ── saving paths ───────────────────────────────────────────
-function downloadFiles(files) {
-  for (const f of files) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(f.blob);
-    a.download = f.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+function triggerDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// Browsers collapse several programmatic downloads fired in a row into one, so
+// multiple files are bundled into a single .zip. A lone file downloads directly.
+async function downloadFiles(files) {
+  if (files.length === 1) {
+    triggerDownload(files[0].blob, files[0].name);
+    return 'Downloaded 1 file to your Downloads folder.';
   }
+  if (!window.JSZip) {
+    // Fallback: stagger the downloads to coax the browser into allowing each.
+    for (const f of files) { triggerDownload(f.blob, f.name); await new Promise((r) => setTimeout(r, 400)); }
+    return `Downloaded ${files.length} files to your Downloads folder.`;
+  }
+  const zip = new window.JSZip();
+  for (const f of files) zip.file(f.name, f.blob);
+  const base = sanitize(`${current.candidateName || 'Application'} - ${current.company || 'Company'}`);
+  const blob = await zip.generateAsync({ type: 'blob' });
+  triggerDownload(blob, `${base}.zip`);
+  return `Downloaded ${base}.zip (${files.length} files) to your Downloads folder.`;
 }
 
 async function saveToFolder(files) {
@@ -124,12 +142,15 @@ async function saveToFolder(files) {
     return downloadFiles(files);
   }
   const dir = await window.showDirectoryPicker({ id: 'recuter', mode: 'readwrite' });
+  let written = 0;
   for (const f of files) {
     const handle = await dir.getFileHandle(f.name, { create: true });
     const w = await handle.createWritable();
     await w.write(f.blob);
     await w.close();
+    written++;
   }
+  return `Saved ${written} file${written === 1 ? '' : 's'} to “${dir.name}”.`;
 }
 
 async function blobToBase64(blob) {
@@ -238,10 +259,13 @@ el.tabResume.addEventListener('click', () => showTab('resume'));
 el.tabLetter.addEventListener('click', () => showTab('letter'));
 
 el.download.addEventListener('click', () =>
-  withSaving('Download', (files) => { downloadFiles(files); return `Downloaded ${files.length} files to your Downloads folder.`; }),
+  withSaving('Download', (files) => downloadFiles(files)),
 );
 el.saveFolder.addEventListener('click', () =>
-  withSaving('Save to folder', async (files) => { await saveToFolder(files); return `Saved ${files.length} files to the folder you chose.`; }),
+  withSaving('Save to folder', async (files) => {
+    const note = await saveToFolder(files);
+    return note || `Saved ${files.length} files to the folder you chose.`;
+  }),
 );
 el.sendHelper.addEventListener('click', () =>
   withSaving('Local helper', async (files) => {

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>recuter — tailored resume + cover letter from a job link</title>
+  <meta name="description" content="Paste a job listing URL. Get a tailored resume and cover letter, saved to your computer." />
+  <link rel="icon" href="/assets/favicon.ico" />
+  <link rel="stylesheet" href="/app/styles.css" />
+  <!-- config: Supabase URL + anon key (public-safe) -->
+  <script src="/config.js"></script>
+  <!-- libraries: markdown render, PDF export, DOCX export, zip bundling -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+  <script src="https://unpkg.com/html-docx-js@0.3.1/dist/html-docx.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    /* PIN gate overlay */
+    #gate {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(1200px 600px at 50% -10%, #1b2030 0%, #0f1115 55%);
+    }
+    #gate .box {
+      background: #171a21; border: 1px solid #2a2f3a; border-radius: 12px;
+      padding: 28px 26px; width: min(92vw, 340px); text-align: center;
+    }
+    #gate h1 { margin: 0 0 4px; font-size: 26px; color: #e7ebf0; letter-spacing: -0.5px; }
+    #gate h1 .dot { color: #5b8cff; }
+    #gate p { margin: 0 0 18px; color: #9aa4b2; font-size: 13.5px; }
+    #gate input {
+      width: 100%; text-align: center; letter-spacing: 6px; font-size: 20px;
+      background: #1e222b; border: 1px solid #2a2f3a; border-radius: 10px;
+      color: #e7ebf0; padding: 12px 14px; margin-bottom: 12px;
+    }
+    #gate input:focus { outline: none; border-color: #5b8cff; }
+    #gate button {
+      width: 100%; background: #5b8cff; border: none; border-radius: 10px;
+      color: #fff; font-weight: 600; font-size: 15px; padding: 12px; cursor: pointer;
+    }
+    #gate .err { color: #e5604d; font-size: 13px; min-height: 18px; margin-top: 10px; }
+    body.locked { overflow: hidden; }
+    #app.hidden { display: none; }
+  </style>
+</head>
+<body class="locked">
+  <!-- ── PIN gate ─────────────────────────────────────────── -->
+  <div id="gate">
+    <div class="box">
+      <h1>recuter<span class="dot">.</span></h1>
+      <p>Enter your PIN to continue.</p>
+      <form id="gateForm">
+        <input id="pin" type="password" inputmode="numeric" autocomplete="off"
+               placeholder="••••" aria-label="PIN" autofocus />
+        <button type="submit">Unlock</button>
+        <div class="err" id="gateErr" role="alert"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── the app (revealed after PIN) ─────────────────────── -->
+  <div id="app" class="hidden">
+    <div class="wrap">
+      <header class="top">
+        <h1>recuter<span class="dot">.</span></h1>
+        <p>Paste a job link. Get a tailored resume and cover letter, saved to your computer.</p>
+      </header>
+
+      <section class="card">
+        <label class="field" for="url">Job listing URL</label>
+        <div class="row">
+          <input id="url" class="grow" type="url" placeholder="https://… link to the job posting" autocomplete="off" />
+          <button id="generate" class="primary">Generate</button>
+        </div>
+
+        <details class="paste" id="pasteBox">
+          <summary>Paste the job description instead (more reliable for LinkedIn / Indeed)</summary>
+          <div>
+            <label class="field" for="jobText">Job description text</label>
+            <textarea id="jobText" placeholder="Paste the full job posting text here…"></textarea>
+          </div>
+        </details>
+
+        <div id="status" class="status info">Maintains your skills, experience, and SEO keywords — and tailors every application to the role.</div>
+      </section>
+
+      <section class="card" id="results" hidden>
+        <div class="meta-bar">
+          <span class="title" id="metaTitle"></span>
+          <span class="company" id="metaCompany"></span>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" id="tabResume">Resume</button>
+          <button class="tab" id="tabLetter">Cover letter</button>
+        </div>
+        <div class="doc" id="resumeDoc"></div>
+        <div class="doc letter" id="letterDoc" hidden></div>
+
+        <div class="save-bar">
+          <div class="formats">
+            <span style="color:var(--muted);font-size:14px;">Save as:</span>
+            <label><input type="checkbox" value="pdf" checked /> PDF</label>
+            <label><input type="checkbox" value="docx" checked /> DOCX</label>
+            <label><input type="checkbox" value="md" /> Markdown</label>
+          </div>
+          <div class="save-actions">
+            <button id="download">Download</button>
+            <button id="saveFolder">Save to folder…</button>
+            <button id="sendHelper">Send to local helper</button>
+          </div>
+        </div>
+        <p class="hint">
+          <strong>Download</strong> → your Downloads folder; multiple files arrive as one .zip (any browser).
+          <strong>Save to folder…</strong> → pick any folder, loose files (Chrome/Edge).
+          <strong>Local helper</strong> → writes to a folder you configure, auto-organized by company, any browser (needs the helper running — see README).
+        </p>
+      </section>
+
+      <footer>
+        Your master profile lives in Supabase — edit skills, experience, and SEO keywords anytime.
+        &nbsp;·&nbsp; <a href="/portfolio/">Portfolio</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ── gate logic ───────────────────────────────────────── -->
+  <script>
+    (function () {
+      // SHA-256 of the PIN. Casual gate only — not real security.
+      var EXPECTED = '274dfec6e079fb08d6b5771537c54d3f0bd36c64c3d8ed0a4e6d2f201b489274';
+      var KEY = 'recuter_unlocked';
+      var gate = document.getElementById('gate');
+      var app = document.getElementById('app');
+      var form = document.getElementById('gateForm');
+      var pin = document.getElementById('pin');
+      var err = document.getElementById('gateErr');
+
+      function reveal() {
+        gate.style.display = 'none';
+        app.classList.remove('hidden');
+        document.body.classList.remove('locked');
+      }
+      async function sha256(s) {
+        var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+        return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+
+      if (sessionStorage.getItem(KEY) === '1') { reveal(); return; }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        err.textContent = '';
+        var hash = await sha256((pin.value || '').trim());
+        if (hash === EXPECTED) {
+          sessionStorage.setItem(KEY, '1');
+          reveal();
+        } else {
+          err.textContent = 'Incorrect PIN.';
+          pin.value = '';
+          pin.focus();
+        }
+      });
+    })();
+  </script>
+  <script src="/app/app.js"></script>
+</body>
+</html>

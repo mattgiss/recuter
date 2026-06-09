@@ -87,6 +87,19 @@ That's everything on the Supabase side. **No `npm`, no server to host, no cron.*
 
 ## Frontend setup
 
+The site has two pages:
+
+- **`/` (`index.html`)** — a public **coming-soon** page.
+- **`/mattgiss/` (`mattgiss/index.html`)** — the actual app, behind a **PIN gate**.
+  It shares `/app/`, `/config.js`, and `/portfolio/` with the root via absolute
+  paths.
+
+> **The PIN is a casual gate, not security.** It hides the UI from casual
+> visitors, but the page code and the public anon key are still viewable by
+> anyone who inspects the site. To change it, replace the `EXPECTED` SHA-256
+> hash in `mattgiss/index.html` (hash your new PIN: `printf '%s' 'YOURPIN' |
+> sha256sum`). For real protection, switch to Supabase Auth on the function.
+
 ### Point the site at your project
 
 `config.js` holds your project URL and **anon** key (public-safe — the function
@@ -135,7 +148,8 @@ No redeploy needed — changes take effect on the next generation.
 ## Repo layout
 
 ```
-index.html                      the app
+index.html                      public coming-soon page
+mattgiss/index.html             the app, behind a PIN gate
 app/                            front-end (styles.css, app.js)
 config.js                       Supabase URL + anon key
 supabase/functions/generate/    the backend (one Edge Function)
